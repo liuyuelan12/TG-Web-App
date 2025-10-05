@@ -43,6 +43,8 @@ export default function AutoChat() {
   const [selectedSource, setSelectedSource] = useState<string>('')
   const [messageSourcesError, setMessageSourcesError] = useState<string | null>(null)
   const [enableLoop, setEnableLoop] = useState(false)  // 添加循环模式状态
+  const [replyProbability, setReplyProbability] = useState(30)  // 回复概率（默认30%）
+  const [reactionProbability, setReactionProbability] = useState(30)  // 表情反应概率（默认30%）
   const statusRef = useRef<HTMLDivElement>(null)
 
   // 获取消息源列表
@@ -191,7 +193,9 @@ export default function AutoChat() {
           isTopic,
           topicId: isTopic ? topicId : undefined,
           messageInterval,
-          enableLoop
+          enableLoop,
+          replyProbability,
+          reactionProbability
         })
       })
 
@@ -660,6 +664,45 @@ export default function AutoChat() {
               </p>
             </div>
 
+            {/* Interaction Probabilities */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  回复消息概率（%）
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={replyProbability}
+                  onChange={(e) => {
+                    const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                    setReplyProbability(val);
+                  }}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  表情反应概率（%）
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={reactionProbability}
+                  onChange={(e) => {
+                    const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                    setReactionProbability(val);
+                  }}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <p className="text-sm text-gray-500">
+              直接发送概率：{Math.max(0, 100 - replyProbability - reactionProbability)}%
+            </p>
+
             {/* Loop Mode Toggle */}
             <div className="flex items-center space-x-2">
               <input
@@ -714,7 +757,7 @@ export default function AutoChat() {
                     <h3 className="text-xl font-semibold mb-4">功能介绍</h3>
                     <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                       自动水群 是一个自动化消息发送工具，可以按照预设的时间间隔自动发送消息到指定的 Telegram 群组或频道。 
-                      支持发送文本、图片、视频、贴纸等多种类型的消息；此外，有25%的几率随机回复别的消息，15%的几率对别的消息进行表情反应，让水群更真实。
+                      支持发送文本、图片、视频、贴纸等多种类型的消息；支持自定义回复消息和表情反应的概率，让水群更真实。
                     </p>
                   </div>
 

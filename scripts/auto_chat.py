@@ -72,6 +72,8 @@ def parse_args():
     parser.add_argument('--root-dir', required=True, help='Root directory of the project')
     parser.add_argument('--user-email', required=True, help='User email for session directory')
     parser.add_argument('--enable-loop', action='store_true', help='Enable continuous message loop')
+    parser.add_argument('--reply-probability', type=float, default=30.0, help='Probability (0-100) of replying to a message')
+    parser.add_argument('--reaction-probability', type=float, default=30.0, help='Probability (0-100) of reacting to a message')
     return parser.parse_args()
 
 async def try_connect_with_proxy(session_file, proxy_config, user_email):
@@ -248,14 +250,20 @@ async def get_sticker_from_message(client, message_data, media_dir):
         traceback.print_exc()
     return None
 
-async def process_message(client, message_data, target_group, recent_messages, topic_id=None, media_dir=None):
-    """Process a single message"""
+async def process_message(client, message_data, target_group, recent_messages, topic_id=None, media_dir=None, reply_probability=30.0, reaction_probability=30.0):
+    """Process a single message
+    
+    Args:
+        reply_probability: Probability (0-100) of replying to a message
+        reaction_probability: Probability (0-100) of reacting to a message
+    """
     try:
         print(f"\nProcessing message data:")
         print(f"Type: {message_data['type']}")
         print(f"Content: {message_data['content'][:50]}..." if not pd.isna(message_data['content']) else "No content")
         print(f"Media file: {message_data['media_file']}" if not pd.isna(message_data['media_file']) else "No media")
         print(f"Topic ID: {topic_id}")
+        print(f"Reply probability: {reply_probability}%, Reaction probability: {reaction_probability}%")
         
         # 获取目标群组实体
         try:
@@ -271,17 +279,21 @@ async def process_message(client, message_data, target_group, recent_messages, t
             kwargs['reply_to'] = topic_id
             print(f"Setting reply_to topic: {topic_id}")
             
+        # 转换概率为0-1范围
+        reply_prob = reply_probability / 100.0
+        reaction_prob = reaction_probability / 100.0
+        
         random_value = random.random()
         print(f"Random value for interaction: {random_value}")
         
-        # 25% 概率回复消息
-        if random_value < 0.25 and recent_messages:
+        # 根据设定的概率回复消息
+        if random_value < reply_prob and recent_messages:
             target_message = recent_messages[-1]  # 回复最新消息
             kwargs['reply_to'] = target_message.id
             print(f"Will reply to message: {target_message.id}")
         
-        # 15% 概率添加表情回应
-        elif random_value < 0.40 and recent_messages:  # 0.25 + 0.15 = 0.40
+        # 根据设定的概率添加表情回应
+        elif random_value < (reply_prob + reaction_prob) and recent_messages:
             target_message = recent_messages[-1]
             reaction = random.choice(REACTION_EMOJIS)
             print(f"Will react with {reaction} to message: {target_message.id}")
@@ -489,7 +501,9 @@ async def run_chat_loop(clients, df, args, media_dir):
                             target_group,
                             recent_messages,
                             topic_id=args.topic_id if args.topic else None,
-                            media_dir=media_dir
+                            media_dir=media_dir,
+                            reply_probability=args.reply_probability,
+                            reaction_probability=args.reaction_probability
                         )
                         message_count += 1
                         print(f"Successfully sent message {message_count}")

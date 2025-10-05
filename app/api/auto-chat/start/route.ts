@@ -79,6 +79,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         args.push('--enable-loop');
       }
 
+      // 添加概率参数
+      if (data.replyProbability !== undefined) {
+        args.push('--reply-probability', data.replyProbability.toString());
+      }
+      if (data.reactionProbability !== undefined) {
+        args.push('--reaction-probability', data.reactionProbability.toString());
+      }
+
       console.log("\nCommand arguments:", args);
 
       // 创建进程
