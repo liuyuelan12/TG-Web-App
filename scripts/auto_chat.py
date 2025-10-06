@@ -458,21 +458,35 @@ async def run_chat_loop(clients, df, args, media_dir):
             
         while True:  # 添加外部循环
             print("\n=== Starting new message cycle ===")
-            # 反转DataFrame的顺序，从最后一条开始发送
-            df_current = df.iloc[::-1].reset_index(drop=True)
             
+            # 随机选择起始位置
+            total_messages = len(df)
+            start_index = random.randint(0, total_messages - 1)
+            
+            # 反转DataFrame的顺序（从最新到最旧）
+            df_reversed = df.iloc[::-1].reset_index(drop=True)
+            
+            # 创建消息发送序列：从随机位置开始，到末尾，然后从头开始（如果启用循环）
+            # 计算实际的起始位置（在反转后的DataFrame中）
             print(f"\nStarting message loop with {len(active_clients)} active clients")
-            print(f"Total messages to send: {len(df_current)}")
-            print("Messages will be sent from newest to oldest")
+            print(f"Total messages available: {total_messages}")
+            print(f"Starting from random position: {start_index + 1}/{total_messages}")
+            print("Messages will be sent from this position onwards (newest to oldest order)")
             
             # 开始消息循环
             message_count = 0
-            for index, row in df_current.iterrows():
+            current_index = start_index
+            
+            while current_index < len(df_reversed):
+                # 获取当前消息
+                
+                row = df_reversed.iloc[current_index]
+                index = current_index
                 try:
                     # 随机选择一个客户端
                     client = random.choice(active_clients)
                     me = await client.get_me()
-                    print(f"\nProcessing message {index + 1}/{len(df_current)} (from newest)")
+                    print(f"\nProcessing message {index + 1}/{len(df_reversed)} (position in reversed order)")
                     print(f"Using client: {me.username} ({client.session.filename})")
                     
                     # 获取最近消息用于上下文
@@ -525,7 +539,9 @@ async def run_chat_loop(clients, df, args, media_dir):
                     
                 except Exception as e:
                     print(f"Error in message loop: {str(e)}")
-                    continue
+                finally:
+                    # 移动到下一条消息
+                    current_index += 1
             
             print(f"\nMessage cycle completed. Sent {message_count} messages successfully.")
             

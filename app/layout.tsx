@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from 'react-hot-toast';
 import Link from 'next/link'
 import ClientSideNav from '@/components/nav'
+import AuthChecker from '@/components/AuthChecker'
 import type { Metadata } from 'next'
 
 const geistSans = Geist({
@@ -40,6 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
+        <AuthChecker />
         <div className="min-h-screen bg-gray-100">
           <header className="bg-white shadow-md">
             <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
