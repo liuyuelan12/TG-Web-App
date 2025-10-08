@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "bash start.sh",
-    "start:next": "next start",
+    "start": "next start",
+    "start:debug": "bash start.sh",
     "lint": "next lint",
     "postinstall": "prisma generate"
   },
