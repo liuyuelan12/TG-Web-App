@@ -3,16 +3,16 @@ Configuration file for Telegram bot scripts
 """
 import os
 
-# Telegram API credentials
-API_ID = 22453265
-API_HASH = "641c3fad1c94728381a70113c70cd52d"
-
 # Constants
 import dotenv
 from pathlib import Path
 
 # 加载环境变量
 dotenv.load_dotenv()
+
+# Telegram API credentials - 从环境变量读取
+API_ID = int(os.environ.get('API_ID', '22453265'))
+API_HASH = os.environ.get('API_HASH', '641c3fad1c94728381a70113c70cd52d')
 
 # 获取项目根目录（默认为当前脚本所在目录的父目录）
 ROOT_DIR = os.environ.get('PROJECT_ROOT', os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
