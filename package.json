@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "bash start.sh",
     "start:next": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
