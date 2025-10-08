@@ -21,6 +21,10 @@ npx prisma migrate deploy
 
 # Build Next.js application
 echo "⚡ Building Next.js application..."
-npm run build
+npm run build 2>&1 | tee build.log || {
+  echo "❌ Build failed! Last 50 lines of output:"
+  tail -n 50 build.log
+  exit 1
+}
 
 echo "✅ Build completed successfully!"
