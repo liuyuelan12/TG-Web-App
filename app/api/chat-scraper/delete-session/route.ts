@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取用户的会话目录
-    const userSessionsDir = path.join('D:', 'tg-bot-web', 'sessions', email)
+    const userSessionsDir = path.join(process.cwd(), 'sessions', email)
     const sessionPath = path.join(userSessionsDir, actualSessionFile)
     
     console.log('File paths:', {
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     // 验证文件路径是否在允许的范围内
     const normalizedSessionPath = path.normalize(sessionPath)
-    const normalizedBasePath = path.normalize(path.join('D:', 'tg-bot-web', 'sessions'))
+    const normalizedBasePath = path.normalize(path.join(process.cwd(), 'sessions'))
     if (!normalizedSessionPath.startsWith(normalizedBasePath)) {
       console.log('Unauthorized path access:', {
         normalizedSessionPath,

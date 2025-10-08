@@ -356,10 +356,10 @@ export default function AutoChat() {
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Session Files Section */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-semibold mb-4">上传用于水群的session文件（点击测试sessions查看现有的）</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">上传用于水群的session文件（点击测试sessions查看现有的）</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-gray-900 mb-2">
                 选择文件
               </label>
               <div className="flex items-center gap-4">
@@ -383,7 +383,7 @@ export default function AutoChat() {
             {/* Selected Files List */}
             {selectedFiles.length > 0 && (
               <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">已选择的文件:</h4>
+                <h4 className="text-sm font-bold text-gray-900 mb-2">已选择的文件:</h4>
                 <ul className="divide-y divide-gray-200">
                   {selectedFiles.map((file, index) => (
                     <li key={index} className="py-2 flex justify-between items-center">
@@ -403,7 +403,7 @@ export default function AutoChat() {
             {/* Upload Results */}
             {uploadResults.length > 0 && (
               <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">上传结果:</h4>
+                <h4 className="text-sm font-bold text-gray-900 mb-2">上传结果:</h4>
                 <ul className="divide-y divide-gray-200">
                   {uploadResults.map((result, index) => (
                     <li key={index} className="py-2">
@@ -433,7 +433,7 @@ export default function AutoChat() {
             {/* Test Results */}
             {results?.length > 0 && (
               <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">测试结果:</h4>
+                <h4 className="text-sm font-bold text-gray-900 mb-2">测试结果:</h4>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
@@ -480,11 +480,11 @@ export default function AutoChat() {
 
         {/* Message Source Upload Section */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-semibold mb-4">上传消息源</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">上传消息源</h3>
           <div className="space-y-4">
             {/* Source Name Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-gray-900 mb-2">
                 自定义消息源名称
               </label>
               <input
@@ -492,13 +492,13 @@ export default function AutoChat() {
                 value={newSourceName}
                 onChange={(e) => setNewSourceName(e.target.value)}
                 placeholder="e.g., MyGroup"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 font-medium"
               />
             </div>
 
             {/* CSV File Upload */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-gray-900 mb-2">
                 消息列表（csv格式）
               </label>
               <input
@@ -508,7 +508,7 @@ export default function AutoChat() {
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               />
               {csvFile && (
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-gray-700">
                   Selected file: {csvFile.name}
                 </p>
               )}
@@ -516,7 +516,7 @@ export default function AutoChat() {
 
             {/* Media Files Upload */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-gray-900 mb-2">
                 媒体文件（可以是视频，图片，gif或者贴纸）
               </label>
               <input
@@ -527,10 +527,10 @@ export default function AutoChat() {
               />
               {mediaFiles.length > 0 && (
                 <div className="mt-2">
-                  <p className="text-sm font-medium text-gray-700 mb-1">Selected files:</p>
+                  <p className="text-sm font-bold text-gray-900 mb-1">Selected files:</p>
                   <ul className="space-y-1">
                     {mediaFiles.map((file, index) => (
-                      <li key={index} className="flex justify-between items-center text-sm text-gray-600">
+                      <li key={index} className="flex justify-between items-center text-sm text-gray-900">
                         <span>{file.name}</span>
                         <button
                           onClick={() => handleRemoveMedia(index)}
@@ -578,11 +578,11 @@ export default function AutoChat() {
 
         {/* Auto Chat Section */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-semibold mb-4">自动水群</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">自动水群</h3>
           <div className="space-y-4">
             {/* Target Group Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-gray-900 mb-2">
                 目标群组
               </label>
               <input
@@ -590,7 +590,7 @@ export default function AutoChat() {
                 value={targetGroup}
                 onChange={(e) => setTargetGroup(e.target.value)}
                 placeholder="例如: https://t.me/groupname"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 font-medium"
               />
             </div>
 
@@ -604,14 +604,14 @@ export default function AutoChat() {
                   onChange={(e) => setIsTopic(e.target.checked)}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="isTopic" className="ml-2 block text-sm text-gray-900">
+                <label htmlFor="isTopic" className="ml-2 block text-sm font-semibold text-gray-900">
                   是否为 Topic 群组
                 </label>
               </div>
 
               {isTopic && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
                     Topic ID
                   </label>
                   <input
@@ -619,7 +619,7 @@ export default function AutoChat() {
                     value={topicId}
                     onChange={(e) => setTopicId(e.target.value)}
                     placeholder="例如: 3"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 font-medium"
                   />
                 </div>
               )}
@@ -627,13 +627,13 @@ export default function AutoChat() {
 
             {/* Message Source Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-gray-900 mb-2">
                 消息源
               </label>
               <select
                 value={selectedSource}
                 onChange={(e) => setSelectedSource(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 font-medium"
               >
                 <option value="">选择一个消息源（如果没有，先去自动扒取或者自己上传一个）</option>
                 {messageSources.map((source) => (
@@ -649,7 +649,7 @@ export default function AutoChat() {
 
             {/* Message Interval */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-gray-900 mb-2">
                 消息间隔（秒）
               </label>
               <input
@@ -657,9 +657,9 @@ export default function AutoChat() {
                 value={messageInterval}
                 onChange={(e) => setMessageInterval(e.target.value)}
                 placeholder="例如: 2-10"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 font-medium"
               />
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-700 mt-1">
                 格式：min-max（例如：2-10 表示随机间隔 2-10 秒）
               </p>
             </div>
@@ -667,7 +667,7 @@ export default function AutoChat() {
             {/* Interaction Probabilities */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-gray-900 mb-2">
                   回复消息概率（%）
                 </label>
                 <input
@@ -679,11 +679,11 @@ export default function AutoChat() {
                     const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
                     setReplyProbability(val);
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 font-medium"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-gray-900 mb-2">
                   表情反应概率（%）
                 </label>
                 <input
@@ -695,11 +695,11 @@ export default function AutoChat() {
                     const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
                     setReactionProbability(val);
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 font-medium"
                 />
               </div>
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-700 font-medium">
               直接发送概率：{Math.max(0, 100 - replyProbability - reactionProbability)}%
             </p>
 
@@ -712,7 +712,7 @@ export default function AutoChat() {
                 onChange={(e) => setEnableLoop(e.target.checked)}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-              <label htmlFor="enableLoop" className="text-sm font-medium text-gray-700">
+              <label htmlFor="enableLoop" className="text-sm font-semibold text-gray-900">
                 启用循环模式（持续发送消息）
               </label>
             </div>
@@ -754,38 +754,38 @@ export default function AutoChat() {
               {status.length === 0 && (
                 <div className="max-w-3xl mx-auto space-y-8">
                   <div>
-                    <h3 className="text-xl font-semibold mb-4">功能介绍</h3>
-                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">功能介绍</h3>
+                    <p className="text-gray-800 leading-relaxed">
                       自动水群 是一个自动化消息发送工具，可以按照预设的时间间隔自动发送消息到指定的 Telegram 群组或频道。 
                       支持发送文本、图片、视频、贴纸等多种类型的消息；支持自定义回复消息和表情反应的概率，让水群更真实。
                     </p>
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-semibold mb-4">使用步骤</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">使用步骤</h3>
                     <ul className="space-y-4">
                       <li>
-                        <strong>目标群组：</strong>
-                        <span className="text-gray-600 dark:text-gray-400">
+                        <strong className="text-gray-900">目标群组：</strong>
+                        <span className="text-gray-800">
                           输入目标 Telegram 群组或频道的链接（例如：https://t.me/example）；
                         </span>
                       </li>
                       <li>
-                        <strong>Topic 设置：</strong>
-                        <span className="text-gray-600 dark:text-gray-400">
+                        <strong className="text-gray-900">Topic 设置：</strong>
+                        <span className="text-gray-800">
                           如果目标群组是否是一个 Topics 群组，如果是，请勾选"是否为 Topic 群组"并输入 Topic ID； 
                           比如https://t.me/linqingfeng221，General 的topic id是1，韩国区的topic id是3，这个你点击邀请链接的时候可以看到；
                         </span>
                       </li>
                       <li>
-                        <strong>消息源选择：</strong>
-                        <span className="text-gray-600 dark:text-gray-400">
+                        <strong className="text-gray-900">消息源选择：</strong>
+                        <span className="text-gray-800">
                           从下拉菜单中选择要使用的消息源。如果没有合适的消息源，可以去"扒取群聊天"自动扒取指定群的聊天消息，也可以使用上方的"上传消息源"功能上传；
                         </span>
                       </li>
                       <li>
-                        <strong>发送间隔：</strong>
-                        <span className="text-gray-600 dark:text-gray-400">
+                        <strong className="text-gray-900">发送间隔：</strong>
+                        <span className="text-gray-800">
                           设置消息发送的时间间隔（格式：min-max，例如：2-10 表示随机 2-10 秒）；
                         </span>
                       </li>
@@ -793,8 +793,8 @@ export default function AutoChat() {
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-semibold mb-4">注意事项</h3>
-                    <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">注意事项</h3>
+                    <ul className="space-y-2 text-gray-800">
                       <li>• 建议设置2-10秒的消息间隔，你也可以看情况自行调整；</li>
                       <li>• 消息源文件必须包含正确的格式和必要的媒体文件；</li>
                       <li>• 可以随时点击"停止自动聊天"按钮终止消息发送；</li>
@@ -802,19 +802,19 @@ export default function AutoChat() {
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-semibold mb-4">常见问题</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">常见问题</h3>
                     <div className="space-y-4">
                       <div>
-                        <p className="font-medium">Q: 为什么消息没有发送成功？</p>
-                        <p className="text-gray-600 dark:text-gray-400">A: 请检查：1) 账号是否在群组中 2) 账号是否有发送权限 3) 消息源文本格式是否正确</p>
+                        <p className="font-bold text-gray-900">Q: 为什么消息没有发送成功？</p>
+                        <p className="text-gray-800">A: 请检查：1) 账号是否在群组中 2) 账号是否有发送权限 3) 消息源文本格式是否正确</p>
                       </div>
                       <div>
-                        <p className="font-medium">Q: 如何准备消息源文件？</p>
-                        <p className="text-gray-600 dark:text-gray-400">A: 使用 <a href="/chat-scraper" className="text-blue-600 hover:text-blue-800">扒取群聊天</a> 功能从其他群组抓取消息，或按照要求的格式准备 CSV 文件</p>
+                        <p className="font-bold text-gray-900">Q: 如何准备消息源文件？</p>
+                        <p className="text-gray-800">A: 使用 <a href="/chat-scraper" className="text-blue-600 hover:text-blue-800 font-semibold">扒取群聊天</a> 功能从其他群组抓取消息，或按照要求的格式准备 CSV 文件</p>
                       </div>
                       <div>
-                        <p className="font-medium">Q: 支持哪些类型的消息？</p>
-                        <p className="text-gray-600 dark:text-gray-400">A: 支持文本、图片、视频、动图、贴纸等多种类型的消息</p>
+                        <p className="font-bold text-gray-900">Q: 支持哪些类型的消息？</p>
+                        <p className="text-gray-800">A: 支持文本、图片、视频、动图、贴纸等多种类型的消息</p>
                       </div>
                     </div>
                   </div>
@@ -822,7 +822,7 @@ export default function AutoChat() {
               )}
 
               {status.map((msg, i) => (
-                <div key={i} className="text-gray-600 dark:text-gray-400 mb-2">
+                <div key={i} className="text-gray-800 mb-2 font-medium">
                   {msg}
                 </div>
               ))}

@@ -113,9 +113,14 @@ export async function POST(req: Request): Promise<Response> {
           const sessionFile = path.join(sessionDir, `${phoneNumber}.session`)
 
           if (fs.existsSync(sessionFile)) {
+            // Read session file and convert to base64
+            const sessionData = fs.readFileSync(sessionFile)
+            const sessionBase64 = sessionData.toString('base64')
+            
             resolve(NextResponse.json({
               success: true,
-              message: 'Session created successfully'
+              message: 'Session created successfully',
+              sessionFile: sessionBase64
             }))
           } else {
             resolve(NextResponse.json(

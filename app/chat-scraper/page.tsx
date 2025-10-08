@@ -314,30 +314,66 @@ export default function ChatScraper() {
   }
 
   return (
-    <div suppressHydrationWarning className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div suppressHydrationWarning className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* Page Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg mb-4">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">扒取群聊天</h1>
+          <p className="text-gray-600">上传 Session 文件并抓取 Telegram 群组消息</p>
+        </div>
+
         {/* Session Files Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-semibold mb-4">选择 Session 文件，如果没有，先去生成</h3>
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">选择 Session 文件</h3>
+              <p className="text-sm text-gray-500">如果没有，先去生成</p>
+            </div>
+          </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
                 选择文件
               </label>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <input
                   type="file"
                   accept=".session"
                   multiple
                   onChange={handleFileSelect}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  className="flex-1 text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-blue-600 file:text-white hover:file:from-blue-600 hover:file:to-blue-700 file:cursor-pointer file:transition-all file:duration-200 file:shadow-md"
                 />
                 <button
                   onClick={handleUpload}
                   disabled={selectedFiles.length === 0 || uploading}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center whitespace-nowrap"
                 >
-                  {uploading ? '上传中...' : '上传'}
+                  {uploading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      上传中...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                      </svg>
+                      上传
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -382,15 +418,33 @@ export default function ChatScraper() {
             )}
 
             {/* Test Button */}
-            <div>
+            <div className="pt-2">
               <button
                 onClick={handleTest}
                 disabled={testing}
-                className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed disabled:shadow-none flex items-center"
               >
-                {testing ? '测试中...' : '测试 Sessions'}
+                {testing ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    测试中...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    测试 Sessions
+                  </>
+                )}
               </button>
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="mt-3 text-xs text-gray-500 flex items-start">
+                <svg className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+                </svg>
                 点击此按钮测试已上传的会话文件。如果还没有上传会话文件，请先上传。
               </p>
             </div>
@@ -421,25 +475,25 @@ export default function ChatScraper() {
             )}
             {/* Test Results */}
             {results.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">测试结果:</h4>
-                <div className="overflow-x-auto">
+              <div className="mt-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">测试结果</h4>
+                <div className="overflow-x-auto bg-white border border-gray-200 rounded-xl shadow-sm">
                   <table className="min-w-full divide-y divide-gray-200">
-                    <thead>
+                    <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-2">SESSION FILE</th>
-                        <th className="px-4 py-2">STATUS</th>
-                        <th className="px-4 py-2">USERNAME</th>
-                        <th className="px-4 py-2">PHONE</th>
-                        <th className="px-4 py-2">ACTIONS</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">SESSION FILE</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">STATUS</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">USERNAME</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">PHONE</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">ACTIONS</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="bg-white divide-y divide-gray-200">
                       {results.map((result) => (
-                        <tr key={result.id} className="border-t">
-                          <td className="px-4 py-2">{result.session}</td>
-                          <td className="px-4 py-2">
-                            <span className={`px-2 py-1 rounded ${
+                        <tr key={result.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{result.session}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                               result.status === 'valid' 
                                 ? 'bg-green-100 text-green-800' 
                                 : 'bg-red-100 text-red-800'
@@ -447,12 +501,12 @@ export default function ChatScraper() {
                               {result.status}
                             </span>
                           </td>
-                          <td className="px-4 py-2">{result.username}</td>
-                          <td className="px-4 py-2">{result.phone}</td>
-                          <td className="px-4 py-2">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{result.username}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{result.phone}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <button
                               onClick={() => handleDelete(result.session)}
-                              className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded"
+                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors shadow-sm"
                             >
                               删除
                             </button>
@@ -464,63 +518,159 @@ export default function ChatScraper() {
                 </div>
               </div>
             )}
+            
+            {/* No Sessions Hint */}
+            {results.length === 0 && !testing && !error && (
+              <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
+                <div className="flex items-start">
+                  <svg className="w-6 h-6 text-blue-500 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <div>
+                    <h4 className="text-sm font-semibold text-blue-900 mb-2">没有 Session 文件？</h4>
+                    <p className="text-sm text-blue-800 mb-3">
+                      您还没有上传任何 Session 文件。您可以：
+                    </p>
+                    <ul className="space-y-2 text-sm text-blue-800">
+                      <li className="flex items-start">
+                        <span className="font-semibold mr-2">1.</span>
+                        <span>
+                          前往 
+                          <a href="/session-gen" className="mx-1 font-semibold text-blue-600 hover:text-blue-700 underline">
+                            生成Session文件
+                          </a> 
+                          页面自己生成（可能会报错）
+                        </span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="font-semibold mr-2">2.</span>
+                        <span>
+                          联系 
+                          <a 
+                            href="https://t.me/kowliep" 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="mx-1 font-semibold text-blue-600 hover:text-blue-700 underline"
+                          >
+                            管理员
+                          </a> 
+                          购买带 Session 文件的电报号（18元/个）
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Group Scraper Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-semibold mb-4">扒取指定群消息</h3>
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">扒取指定群消息</h3>
+              <p className="text-sm text-gray-500">输入群组名称并开始抓取</p>
+            </div>
+          </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 群组名称
               </label>
-              <input
-                type="text"
-                value={group}
-                onChange={(e) => setGroup(e.target.value)}
-                placeholder="例如: LSMM8 (不需要 @ 符号)"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  value={group}
+                  onChange={(e) => setGroup(e.target.value)}
+                  placeholder="例如: LSMM8 (不需要 @ 符号)"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 font-medium placeholder:text-gray-400"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 消息数量限制
               </label>
-              <input
-                type="number"
-                value={messageLimit}
-                onChange={(e) => setMessageLimit(parseInt(e.target.value) || 1000)}
-                min="1"
-                max="5000"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                  </svg>
+                </div>
+                <input
+                  type="number"
+                  value={messageLimit}
+                  onChange={(e) => setMessageLimit(parseInt(e.target.value) || 1000)}
+                  min="1"
+                  max="5000"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 font-medium placeholder:text-gray-400"
+                />
+              </div>
             </div>
 
-            <div>
+            <div className="pt-2">
               <button
                 onClick={handleScrape}
                 disabled={scraping || !group}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed disabled:shadow-none flex items-center"
               >
-                {scraping ? '抓取中...' : '开始抓取'}
+                {scraping ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    抓取中...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    开始抓取
+                  </>
+                )}
               </button>
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="mt-3 text-xs text-gray-500 flex items-start">
+                <svg className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+                </svg>
                 扒取过程花费时间较长，1000条消息可能高达20分钟，请耐心等待。扒取完成后会自动显示下载选项。
               </p>
             </div>
 
             {/* Progress Bar */}
             {progress && (
-              <div className="mt-4">
-                <div className="flex justify-between text-sm text-gray-600 mb-1">
-                  <span>进度：{progress.current} / {progress.total}</span>
-                  <span>{Math.round(progress.percentage)}%</span>
+              <div className="mt-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-100">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                      <svg className="w-5 h-5 text-purple-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">正在抓取消息...</p>
+                      <p className="text-xs text-gray-500">{progress.current} / {progress.total} 条消息</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-purple-600">{Math.round(progress.percentage)}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                   <div
-                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                    className="bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full transition-all duration-500 ease-out"
                     style={{ width: `${progress.percentage}%` }}
                   ></div>
                 </div>
@@ -529,8 +679,18 @@ export default function ChatScraper() {
 
             {/* Scrape Results */}
             {scrapeResult && isComplete && (
-              <div className="mt-4 bg-green-50 rounded-lg p-4">
-                <h4 className="text-lg font-medium text-green-800 mb-3">抓取结果</h4>
+              <div className="mt-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-green-900">抓取完成！</h4>
+                    <p className="text-sm text-green-600">数据已准备好，可以下载</p>
+                  </div>
+                </div>
                 <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
                     <dt className="text-sm font-medium text-green-600">群组</dt>
@@ -545,17 +705,23 @@ export default function ChatScraper() {
                     <dd className="mt-1 text-sm text-green-900">{scrapeResult.mediaFiles}</dd>
                   </div>
                 </dl>
-                <div className="mt-4 flex gap-4">
+                <div className="mt-6 flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={() => handleDownload('csv')}
-                    className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center"
                   >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
                     下载 CSV
                   </button>
                   <button
                     onClick={() => handleDownload('all')}
-                    className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center"
                   >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
                     下载所有文件 (ZIP)
                   </button>
                 </div>

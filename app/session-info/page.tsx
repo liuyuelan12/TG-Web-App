@@ -162,7 +162,7 @@ export default function SessionInfo() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="title text-2xl font-bold">Telegram 账号信息</h1>
+        <h1 className="title text-2xl font-bold text-gray-900">Telegram 账号信息</h1>
         <button
           onClick={handleFetchInfo}
           disabled={loading}
@@ -176,7 +176,7 @@ export default function SessionInfo() {
       {editingSession && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">修改账号信息</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">修改账号信息</h2>
             <form onSubmit={handleUpdate} className="space-y-4">
               {/* 通用错误提示 */}
               {formErrors.general && (
@@ -184,56 +184,56 @@ export default function SessionInfo() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-bold text-gray-900">
                   名字
                 </label>
                 <input
                   type="text"
                   value={form.first_name}
                   onChange={e => setForm(prev => ({ ...prev, first_name: e.target.value }))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 font-medium"
                 />
                 {formErrors.first_name && (
                   <div className="text-red-500 text-sm mt-1">{formErrors.first_name}</div>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-bold text-gray-900">
                   姓氏
                 </label>
                 <input
                   type="text"
                   value={form.last_name}
                   onChange={e => setForm(prev => ({ ...prev, last_name: e.target.value }))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 font-medium"
                 />
                 {formErrors.last_name && (
                   <div className="text-red-500 text-sm mt-1">{formErrors.last_name}</div>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-bold text-gray-900">
                   用户名
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-700 font-semibold">
                     @
                   </span>
                   <input
                     type="text"
                     value={form.username}
                     onChange={e => setForm(prev => ({ ...prev, username: e.target.value.replace(/^@/, '') }))}
-                    className="pl-7 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="pl-7 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 font-medium"
                     placeholder="username"
                   />
                   {formErrors.username && (
                     <div className="text-red-500 text-sm mt-1">{formErrors.username}</div>
                   )}
                 </div>
-                <p className="mt-1 text-sm text-gray-500">不需要输入@符号</p>
+                <p className="mt-1 text-sm text-gray-700">不需要输入@符号</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-bold text-gray-900">
                   头像
                 </label>
                 <input
@@ -275,22 +275,22 @@ export default function SessionInfo() {
           <table className="table min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   手机号
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   名字
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   姓氏
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   用户名
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   ID
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   操作
                 </th>
               </tr>
@@ -308,7 +308,7 @@ export default function SessionInfo() {
                 </tr>
               ) : sessions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500 empty-message">
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-700 font-medium empty-message">
                     没有找到任何会话信息
                   </td>
                 </tr>

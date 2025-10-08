@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 创建用户特定的目录结构
-    const userDir = path.join('D:', 'tg-bot-web', 'scraped_data', auth.user.email);
+    const userDir = path.join(process.cwd(), 'scraped_data', auth.user.email);
     const sourceDir = path.join(userDir, sourceName);
     const mediaDir = path.join(sourceDir, 'media');
 
