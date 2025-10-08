@@ -9,7 +9,7 @@ services:
     plan: starter
     region: oregon
     buildCommand: bash render-build.sh
-    startCommand: npm start
+    startCommand: bash start.sh
     healthCheckPath: /api/auth/check-status
     envVars:
       - key: NODE_ENV

@@ -1,0 +1,20 @@
+# Render should NOT ignore these directories
+# (Override .gitignore for deployment)
+
+# Keep node_modules out (installed during build)
+node_modules/
+
+# Keep environment files out
+.env
+.env.*
+
+# Keep development files out
+.git/
+*.log
+coverage/
+
+# Keep temporary files out
+*.tmp
+.DS_Store
+
+# Everything else, including .next, should be uploaded
