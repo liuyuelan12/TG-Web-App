@@ -8,8 +8,10 @@ const JWT_SECRET = new TextEncoder().encode('your-jwt-secret-key')
 const publicPaths = [
   '/login',
   '/api/auth/login',
+  '/api/auth/check-status',
   '/_next',
-  '/favicon.ico'
+  '/favicon.ico',
+  '/tg-logo.png'
 ]
 
 // 需要管理员权限的路由
