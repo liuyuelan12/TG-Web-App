@@ -16,5 +16,6 @@ if [ ! -d ".next" ]; then
   exit 1
 fi
 
-echo "✅ .next directory found, starting Next.js..."
-exec npm start
+echo "✅ .next directory found, starting Next.js with memory limit..."
+# Limit Node.js to 450MB to fit in 512MB container
+exec node --max-old-space-size=450 ./node_modules/.bin/next start
