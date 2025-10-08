@@ -27,4 +27,9 @@ npm run build 2>&1 | tee build.log || {
   exit 1
 }
 
+# Copy static files for standalone mode
+echo "📦 Copying static files for standalone build..."
+cp -r public .next/standalone/
+cp -r .next/static .next/standalone/.next/
+
 echo "✅ Build completed successfully!"
