@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const navItems = [
   { name: '生成Session文件', href: '/session-gen' },
@@ -16,6 +16,24 @@ export default function ClientSideNav() {
   const pathname = usePathname()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  
+  // 获取当前用户信息
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await fetch('/api/auth/check-status')
+        const data = await response.json()
+        if (data.authenticated && data.user) {
+          setUserEmail(data.user.email)
+        }
+      } catch (error) {
+        console.error('Error fetching user info:', error)
+      }
+    }
+    
+    fetchUserInfo()
+  }, [])
   
   const handleLogout = async () => {
     try {
@@ -56,6 +74,11 @@ export default function ClientSideNav() {
             </Link>
           )
         })}
+        {userEmail && (
+          <span className="text-sm text-gray-600 px-3 py-1.5 bg-gray-100 rounded-md">
+            {userEmail}
+          </span>
+        )}
         <button
           onClick={handleLogout}
           className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
@@ -109,6 +132,13 @@ export default function ClientSideNav() {
             isOpen ? 'block' : 'hidden'
           } absolute right-0 top-16 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-50`}
         >
+          {userEmail && (
+            <>
+              <div className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-b">
+                {userEmail}
+              </div>
+            </>
+          )}
           {navItems.map((item) => {
             const isActive = !item.external && pathname === item.href
             return (
