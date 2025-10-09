@@ -170,6 +170,66 @@ export default function AutoChat() {
     }
   }
 
+  const handleDeleteAllInvalid = async () => {
+    const invalidSessions = results.filter(r => r.status === 'invalid')
+    
+    if (invalidSessions.length === 0) {
+      return
+    }
+
+    if (!confirm(`确定要删除 ${invalidSessions.length} 个 invalid 的会话文件吗？此操作不可撤销。`)) {
+      return
+    }
+
+    try {
+      setError(null)
+      let successCount = 0
+      let failCount = 0
+
+      // 批量删除所有 invalid sessions
+      for (const session of invalidSessions) {
+        try {
+          const response = await fetch('/api/chat-scraper/delete-session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              sessionFile: session.session.endsWith('.session') ? session.session : session.session + '.session'
+            }),
+          })
+
+          const data = await response.json()
+          
+          if (response.ok && data.success) {
+            successCount++
+          } else {
+            failCount++
+            console.error(`Failed to delete ${session.session}:`, data.message)
+          }
+        } catch (error) {
+          failCount++
+          console.error(`Error deleting ${session.session}:`, error)
+        }
+      }
+
+      // 显示结果
+      if (successCount > 0) {
+        alert(`成功删除 ${successCount} 个 invalid sessions${failCount > 0 ? `，${failCount} 个失败` : ''}`)
+      }
+      
+      if (failCount > 0 && successCount === 0) {
+        setError(`删除失败: ${failCount} 个文件删除失败`)
+      }
+
+      // 刷新会话列表
+      await handleTest()
+    } catch (error: any) {
+      console.error('Error in batch delete:', error)
+      setError(error.message || '批量删除失败')
+    }
+  }
+
   const handleStartAutoChat = async () => {
     if (!targetGroup || !selectedSource) {
       setAutoChatStatus('Please fill in all required fields')
@@ -433,7 +493,20 @@ export default function AutoChat() {
             {/* Test Results */}
             {results?.length > 0 && (
               <div className="mt-4">
-                <h4 className="text-sm font-bold text-gray-900 mb-2">测试结果:</h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-bold text-gray-900">测试结果:</h4>
+                  {results.some(r => r.status === 'invalid') && (
+                    <button
+                      onClick={handleDeleteAllInvalid}
+                      className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-md transition-colors shadow-sm flex items-center gap-1.5"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                      删除所有 Invalid ({results.filter(r => r.status === 'invalid').length})
+                    </button>
+                  )}
+                </div>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
