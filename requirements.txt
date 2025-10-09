@@ -3,4 +3,4 @@ python-socks[asyncio]==2.6.1
 python-dotenv==1.0.1
 pandas==2.2.3
 emoji==2.8.0
-numpy==2.2.1
+numpy==2.1.0
