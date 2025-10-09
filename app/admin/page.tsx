@@ -358,7 +358,7 @@ export default function AdminPage() {
                           过期时间: {user.expiresAt ? new Date(user.expiresAt).toLocaleString('zh-CN') : '永久'}
                         </p>
                       </div>
-                      <div className="ml-4 flex gap-2">
+                      <div className="ml-4 flex gap-2 flex-wrap">
                         <button
                           onClick={() => handleViewUserFiles(user.email, 'scraped_data')}
                           className="px-3 py-1 text-sm rounded-md text-white bg-blue-600 hover:bg-blue-700"
@@ -366,10 +366,16 @@ export default function AdminPage() {
                           查看文件
                         </button>
                         <button
-                          onClick={() => handleDownloadUserFiles(user.email, 'all')}
+                          onClick={() => handleDownloadUserFiles(user.email, 'sessions')}
+                          className="px-3 py-1 text-sm rounded-md text-white bg-purple-600 hover:bg-purple-700"
+                        >
+                          下载 Sessions
+                        </button>
+                        <button
+                          onClick={() => handleDownloadUserFiles(user.email, 'scraped_data')}
                           className="px-3 py-1 text-sm rounded-md text-white bg-green-600 hover:bg-green-700"
                         >
-                          下载全部
+                          下载爬取数据
                         </button>
                         {!user.isAdmin && (
                           <button
@@ -422,26 +428,38 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* 文件类型切换 */}
-              <div className="flex gap-2 mb-4">
-                <button
-                  onClick={() => handleViewUserFiles(selectedUser, 'sessions')}
-                  className="px-4 py-2 text-sm rounded-md bg-purple-100 hover:bg-purple-200 text-purple-800"
-                >
-                  Sessions
-                </button>
-                <button
-                  onClick={() => handleViewUserFiles(selectedUser, 'uploads')}
-                  className="px-4 py-2 text-sm rounded-md bg-blue-100 hover:bg-blue-200 text-blue-800"
-                >
-                  Uploads
-                </button>
-                <button
-                  onClick={() => handleViewUserFiles(selectedUser, 'scraped_data')}
-                  className="px-4 py-2 text-sm rounded-md bg-green-100 hover:bg-green-200 text-green-800"
-                >
-                  Scraped Data
-                </button>
+              {/* 文件类型切换和下载 */}
+              <div className="flex gap-2 mb-4 justify-between">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleViewUserFiles(selectedUser, 'sessions')}
+                    className={`px-4 py-2 text-sm rounded-md ${
+                      userFiles?.type === 'sessions' 
+                        ? 'bg-purple-600 text-white' 
+                        : 'bg-purple-100 hover:bg-purple-200 text-purple-800'
+                    }`}
+                  >
+                    Sessions
+                  </button>
+                  <button
+                    onClick={() => handleViewUserFiles(selectedUser, 'scraped_data')}
+                    className={`px-4 py-2 text-sm rounded-md ${
+                      userFiles?.type === 'scraped_data' 
+                        ? 'bg-green-600 text-white' 
+                        : 'bg-green-100 hover:bg-green-200 text-green-800'
+                    }`}
+                  >
+                    Scraped Data
+                  </button>
+                </div>
+                {userFiles && userFiles.files.length > 0 && (
+                  <button
+                    onClick={() => handleDownloadUserFiles(selectedUser, userFiles.type as any)}
+                    className="px-4 py-2 text-sm rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    📥 下载当前类型
+                  </button>
+                )}
               </div>
 
               {/* 文件列表 */}
