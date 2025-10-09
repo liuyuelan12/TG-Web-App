@@ -11,6 +11,24 @@ interface User {
   updatedAt: string
 }
 
+interface FileInfo {
+  name: string
+  path: string
+  size: number
+  modifiedAt: string
+  isDirectory: boolean
+}
+
+interface UserFilesData {
+  success: boolean
+  userEmail: string
+  type: string
+  files: FileInfo[]
+  totalSize: number
+  totalFiles: number
+  totalDirectories: number
+}
+
 export default function AdminPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -21,6 +39,10 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
+  const [selectedUser, setSelectedUser] = useState<string | null>(null)
+  const [userFiles, setUserFiles] = useState<UserFilesData | null>(null)
+  const [loadingFiles, setLoadingFiles] = useState(false)
+  const [activeTab, setActiveTab] = useState<'users' | 'files'>('users')
   const router = useRouter()
 
   // 获取所有用户
@@ -170,6 +192,44 @@ export default function AdminPage() {
     }
   }
 
+  // 查看用户文件
+  const handleViewUserFiles = async (userEmail: string, type: 'sessions' | 'uploads' | 'scraped_data') => {
+    setSelectedUser(userEmail)
+    setLoadingFiles(true)
+    setActiveTab('files')
+    
+    try {
+      const response = await fetch(`/api/admin/list-user-files?email=${encodeURIComponent(userEmail)}&type=${type}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setUserFiles(data)
+      } else {
+        setError('Failed to load user files')
+      }
+    } catch (error) {
+      console.error('Error loading user files:', error)
+      setError('Failed to load user files')
+    } finally {
+      setLoadingFiles(false)
+    }
+  }
+
+  // 下载用户文件
+  const handleDownloadUserFiles = (userEmail: string, type: 'sessions' | 'uploads' | 'scraped_data' | 'all') => {
+    const url = `/api/admin/download-user-files?email=${encodeURIComponent(userEmail)}&type=${type}`
+    window.open(url, '_blank')
+  }
+
+  // 格式化文件大小
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
@@ -298,7 +358,19 @@ export default function AdminPage() {
                           过期时间: {user.expiresAt ? new Date(user.expiresAt).toLocaleString('zh-CN') : '永久'}
                         </p>
                       </div>
-                      <div className="ml-4">
+                      <div className="ml-4 flex gap-2">
+                        <button
+                          onClick={() => handleViewUserFiles(user.email, 'scraped_data')}
+                          className="px-3 py-1 text-sm rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                        >
+                          查看文件
+                        </button>
+                        <button
+                          onClick={() => handleDownloadUserFiles(user.email, 'all')}
+                          className="px-3 py-1 text-sm rounded-md text-white bg-green-600 hover:bg-green-700"
+                        >
+                          下载全部
+                        </button>
                         {!user.isAdmin && (
                           <button
                             onClick={() => handleDeleteUser(user.email)}
@@ -326,6 +398,94 @@ export default function AdminPage() {
           )}
         </div>
         </div>
+
+        {/* 文件管理面板 */}
+        {activeTab === 'files' && selectedUser && (
+          <div className="mt-8">
+            <div className="bg-white shadow rounded-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">{selectedUser} 的文件</h3>
+                  {userFiles && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      {userFiles.totalFiles} 个文件，
+                      {userFiles.totalDirectories} 个目录，
+                      总大小: {formatFileSize(userFiles.totalSize)}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className="px-4 py-2 text-sm rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300"
+                >
+                  返回用户列表
+                </button>
+              </div>
+
+              {/* 文件类型切换 */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => handleViewUserFiles(selectedUser, 'sessions')}
+                  className="px-4 py-2 text-sm rounded-md bg-purple-100 hover:bg-purple-200 text-purple-800"
+                >
+                  Sessions
+                </button>
+                <button
+                  onClick={() => handleViewUserFiles(selectedUser, 'uploads')}
+                  className="px-4 py-2 text-sm rounded-md bg-blue-100 hover:bg-blue-200 text-blue-800"
+                >
+                  Uploads
+                </button>
+                <button
+                  onClick={() => handleViewUserFiles(selectedUser, 'scraped_data')}
+                  className="px-4 py-2 text-sm rounded-md bg-green-100 hover:bg-green-200 text-green-800"
+                >
+                  Scraped Data
+                </button>
+              </div>
+
+              {/* 文件列表 */}
+              {loadingFiles ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">加载中...</p>
+                </div>
+              ) : userFiles && userFiles.files.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">文件名</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">类型</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">大小</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">修改时间</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {userFiles.files.filter(f => !f.isDirectory).map((file, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 text-sm text-gray-900">{file.path}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            {file.isDirectory ? '目录' : '文件'}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            {formatFileSize(file.size)}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            {new Date(file.modifiedAt).toLocaleString('zh-CN')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  该用户还没有上传任何文件
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
