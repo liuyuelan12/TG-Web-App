@@ -6,13 +6,28 @@ import archiver from 'archiver'
 
 export async function GET(req: NextRequest) {
   try {
-    // 验证管理员权限
-    const auth = await verifyAuth(req)
-    if (!auth.success || auth.user?.role !== 'admin') {
+    const { searchParams } = new URL(req.url)
+    
+    // 简单密钥验证（可选：也可以使用管理员认证）
+    const secret = searchParams.get('secret')
+    
+    // 尝试两种认证方式：1. 密钥 2. 管理员登录
+    let authorized = false
+    
+    if (secret === 'download-files-2025') {
+      authorized = true
+    } else {
+      // 尝试管理员认证
+      const auth = await verifyAuth(req)
+      if (auth.success && auth.user?.isAdmin === true) {
+        authorized = true
+      }
+    }
+    
+    if (!authorized) {
       return handleAuthError('UNAUTHORIZED')
     }
 
-    const { searchParams } = new URL(req.url)
     const type = searchParams.get('type') // 'sessions', 'uploads', 'scraped_data'
 
     let dirPath: string
