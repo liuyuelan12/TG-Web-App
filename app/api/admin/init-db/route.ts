@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth, handleAuthError } from '@/lib/auth'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 
@@ -7,10 +6,15 @@ const execAsync = promisify(exec)
 
 export async function POST(req: NextRequest) {
   try {
-    // 验证管理员权限
-    const auth = await verifyAuth(req)
-    if (!auth.success || auth.user?.role !== 'admin') {
-      return handleAuthError('UNAUTHORIZED')
+    // 简单的密钥验证（临时使用）
+    const { searchParams } = new URL(req.url)
+    const secret = searchParams.get('secret')
+    
+    if (secret !== 'init-database-2025') {
+      return NextResponse.json(
+        { error: 'Invalid secret key' },
+        { status: 401 }
+      )
     }
 
     console.log('Starting database migration...')
