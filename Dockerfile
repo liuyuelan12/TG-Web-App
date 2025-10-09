@@ -29,5 +29,11 @@ RUN npm run build
 # Expose port
 EXPOSE 3000
 
-# Start application
-CMD ["npm", "start"]
+# Create init script to set up volume directories
+RUN echo '#!/bin/sh\n\
+mkdir -p /app/data/sessions /app/data/uploads /app/data/scraped_data\n\
+chmod -R 777 /app/data\n\
+exec npm start' > /app/start.sh && chmod +x /app/start.sh
+
+# Start application with init script
+CMD ["/app/start.sh"]
