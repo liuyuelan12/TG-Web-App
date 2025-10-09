@@ -216,9 +216,9 @@ export default function ChatScraper() {
     console.log('scrapeResult:', scrapeResult)
     console.log('session:', session)
 
-    if (!scrapeResult?.group) {
-      console.error('No group in scrapeResult')
-      toast.error('群组名称不存在');
+    if (!scrapeResult?.csvFile && !scrapeResult?.folderPath) {
+      console.error('No file paths in scrapeResult')
+      toast.error('文件路径不存在');
       return;
     }
 
@@ -229,11 +229,10 @@ export default function ChatScraper() {
     }
 
     try {
-      // 移除群组名称中的 @ 符号，并转换为小写
-      const cleanGroupName = scrapeResult.group.replace(/^@/, '').toLowerCase();
+      // 使用 scrapeResult 中的实际路径，移除开头的 /app/
       const filePath = type === 'csv' 
-        ? `scraped_data/${session.id}/${cleanGroupName}/${cleanGroupName}_messages.csv`
-        : `scraped_data/${session.id}/${cleanGroupName}`;
+        ? scrapeResult.csvFile.replace(/^\/app\//, '')
+        : scrapeResult.folderPath.replace(/^\/app\//, '');
 
       console.log('Sending download request with path:', filePath)
       
@@ -260,7 +259,9 @@ export default function ChatScraper() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = type === 'csv' ? `${cleanGroupName}_messages.csv` : `${cleanGroupName}_all.zip`;
+      // 从 scrapeResult 中获取群组名称
+      const groupName = scrapeResult.group.replace(/^@/, '');
+      a.download = type === 'csv' ? `${groupName}_messages.csv` : `${groupName}_all.zip`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
