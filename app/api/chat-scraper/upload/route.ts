@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, handleAuthError } from '@/lib/auth'
+import { getUserStoragePath } from '@/lib/storage-paths'
 import path from 'path'
 import fs from 'fs'
 
@@ -22,14 +23,9 @@ export async function POST(request: NextRequest): Promise<Response> {
       )
     }
 
-    // Create user's sessions directory
-    const rootDir = process.cwd()
-    const userSessionsDir = path.join(rootDir, 'sessions', email)
-    console.log('Route handler - creating directory:', userSessionsDir)
-    
-    if (!fs.existsSync(userSessionsDir)) {
-      fs.mkdirSync(userSessionsDir, { recursive: true })
-    }
+    // Get user's sessions directory (automatically creates if needed)
+    const userSessionsDir = getUserStoragePath('sessions', email)
+    console.log('Route handler - using directory:', userSessionsDir)
 
     console.log(`Processing ${files.length} files for user ${email}...`)
     const results: Array<{ name: string; success: boolean; error?: string }> = []

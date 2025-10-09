@@ -1,4 +1,5 @@
 import path from 'path'
+import fs from 'fs'
 
 // Railway 只允许单个 volume，所以所有数据存储在 /app/data 下
 const BASE_DATA_DIR = process.env.DATA_DIR || '/app/data'
@@ -14,10 +15,29 @@ export const STORAGE_PATHS = {
   legacyScrapedData: path.join(process.cwd(), 'scraped_data'),
 }
 
+// 清理邮箱作为文件夹名（移除特殊字符，保留 @._-）
+export function sanitizeEmail(email: string): string {
+  return email.replace(/[^a-zA-Z0-9@._-]/g, '_')
+}
+
+// 获取用户专属的存储路径
+export function getUserStoragePath(
+  type: 'sessions' | 'uploads' | 'scraped_data',
+  userEmail: string
+): string {
+  const basePath = getStoragePath(type)
+  const userPath = path.join(basePath, sanitizeEmail(userEmail))
+  
+  // 自动创建用户目录
+  if (!fs.existsSync(userPath)) {
+    fs.mkdirSync(userPath, { recursive: true })
+  }
+  
+  return userPath
+}
+
 // 获取实际使用的路径（优先使用新路径）
 export function getStoragePath(type: 'sessions' | 'uploads' | 'scraped_data'): string {
-  const fs = require('fs')
-  
   let newPath: string
   let legacyPath: string
   
