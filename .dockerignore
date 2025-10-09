@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.env
+.env.*
+*.log
+sessions/
+uploads/
+scraped_data/
+.vercel
+.cursor
+.vscode
+prisma/*.db
+prisma/*.db-journal
