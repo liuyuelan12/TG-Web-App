@@ -9,21 +9,19 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files and Prisma schema first
 COPY package*.json ./
 COPY requirements.txt ./
+COPY prisma ./prisma/
 
-# Install Node.js dependencies
+# Install Node.js dependencies (postinstall will run prisma generate)
 RUN npm install
 
 # Install Python dependencies
 RUN pip3 install -r requirements.txt
 
-# Copy application code
+# Copy rest of application code
 COPY . .
-
-# Generate Prisma Client
-RUN npx prisma generate
 
 # Build Next.js
 RUN npm run build
