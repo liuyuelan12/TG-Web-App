@@ -3,13 +3,16 @@ import { useRouter, usePathname } from 'next/navigation'
 
 const CHECK_INTERVAL = 30000 // 每30秒检查一次
 
+// 全局标记，避免多次重定向
+let isRedirecting = false
+
 export function useAuthCheck() {
   const router = useRouter()
   const pathname = usePathname()
 
   const checkAuthStatus = useCallback(async () => {
-    // 如果在登录页面，不需要检查
-    if (pathname === '/login') {
+    // 如果在登录页面或正在重定向，不需要检查
+    if (pathname === '/login' || isRedirecting) {
       return
     }
 
@@ -25,9 +28,9 @@ export function useAuthCheck() {
             data.errorType === 'USER_EXPIRED' ||
             data.errorType === 'TOKEN_EXPIRED') {
           
-          // 清除本地存储
-          localStorage.clear()
-          sessionStorage.clear()
+          // 设置重定向标记，避免重复执行
+          if (isRedirecting) return
+          isRedirecting = true
           
           // 显示提示
           const messages: Record<string, string> = {
@@ -38,11 +41,15 @@ export function useAuthCheck() {
           
           alert(messages[data.errorType] || '请重新登录')
           
-          // 重定向到登录页
-          router.push('/login')
+          // 先清除 cookie
+          document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
           
-          // 强制刷新页面以清除所有状态
-          window.location.reload()
+          // 清除本地存储
+          localStorage.clear()
+          sessionStorage.clear()
+          
+          // 重定向到登录页（使用 window.location 而不是 router.push，避免缓存）
+          window.location.href = '/login'
         }
       }
     } catch (error) {
