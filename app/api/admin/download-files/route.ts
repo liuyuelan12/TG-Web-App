@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, handleAuthError } from '@/lib/auth'
+import { getStoragePath } from '@/lib/storage-paths'
 import fs from 'fs'
 import path from 'path'
 import archiver from 'archiver'
@@ -35,15 +36,15 @@ export async function GET(req: NextRequest) {
 
     switch (type) {
       case 'sessions':
-        dirPath = path.join(process.cwd(), 'sessions')
+        dirPath = getStoragePath('sessions')
         zipName = 'sessions.zip'
         break
       case 'uploads':
-        dirPath = path.join(process.cwd(), 'uploads')
+        dirPath = getStoragePath('uploads')
         zipName = 'uploads.zip'
         break
       case 'scraped_data':
-        dirPath = path.join(process.cwd(), 'scraped_data')
+        dirPath = getStoragePath('scraped_data')
         zipName = 'scraped_data.zip'
         break
       default:
