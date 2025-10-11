@@ -34,12 +34,19 @@ REACTION_EMOJIS = ['👍', '🔥', '🎉', '💯']
 # Proxy configurations
 PROXY_CONFIGS = [
     {
-       'proxy_type': 'socks5',
-        'addr': '102.177.146.156',
+        'proxy_type': 'socks5',
+        'addr': '102.177.147.43',
         'port': 50101,
         'username': 'zhouhaha',
         'password': '963091790'
-    }
+    },
+    {
+        'proxy_type': 'socks5',
+        'addr': '102.177.146.2',
+        'port': 50101,
+        'username': 'zhouhaha',
+        'password': '963091790'
+    },
 ]
 
 # Default proxy configuration (used by session_gen.py)
