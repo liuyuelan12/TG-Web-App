@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Error uploading message source:', error);
     return NextResponse.json(
-      { success: false, message: error.message || 'Failed to upload message source' },
+      { success: false, message: error.message || 'Failed to 上传消息源' },
       { status: 500 }
     );
   }

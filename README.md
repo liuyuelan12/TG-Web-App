@@ -88,10 +88,20 @@ npm run dev
 
 详见 [docs/Render/README.md](docs/Render/README.md)
 
+### 部署到 Railway
+
+本项目完整支持 Railway 部署，包括代理配置和数据持久化方案。
+
+**特性**:
+- ✅ 代理配置支持环境变量动态更新（无需重新部署）
+- ✅ 持久化卷保存用户 session 数据（不会因重新部署丢失）
+- ✅ 一键连接 GitHub 自动部署
+
+查看详细配置指南：**[RAILWAY_SETUP.md](RAILWAY_SETUP.md)**
+
 ### 部署到其他平台
 
 - **Vercel**: 需要使用 Vercel Postgres
-- **Railway**: 类似 Render，支持混合运行时
 - **AWS/GCP**: 使用 Docker 部署
 
 ## 📖 项目结构
@@ -138,8 +148,12 @@ tg-bot-web/
 | `NEXTAUTH_SECRET` | NextAuth 密钥 | ✅ |
 | `NEXTAUTH_URL` | 应用 URL | ✅ |
 | `NODE_ENV` | 环境 (development/production) | ✅ |
-| `TELEGRAM_API_ID` | Telegram API ID | ⚠️ |
-| `TELEGRAM_API_HASH` | Telegram API Hash | ⚠️ |
+| `API_ID` | Telegram API ID | ⚠️ |
+| `API_HASH` | Telegram API Hash | ⚠️ |
+| `PROXY_CONFIGS` | 代理配置（支持动态更新） | ❌ |
+| `SESSIONS_DIR` | Session 文件存储路径 | ❌ |
+| `MEDIA_DIR` | 媒体文件存储路径 | ❌ |
+| `PROJECT_ROOT` | 项目根目录路径 | ❌ |
 
 ### Python 脚本
 
@@ -197,8 +211,18 @@ python scripts/test_sessions.py
 **问题**: Session 文件丢失
 
 **解决**:
-- 使用持久化存储 (Render Disk)
+- 使用持久化存储 (Render Disk 或 Railway Volume)
+- 配置 `SESSIONS_DIR` 环境变量指向持久化卷
 - 或迁移到云存储 (S3/R2)
+- 详见 [Railway 配置指南](RAILWAY_SETUP.md#2-使用持久化存储保存用户数据)
+
+**问题**: 代理过期需要频繁更新
+
+**解决**:
+- 使用环境变量配置代理（推荐）
+- 在 Railway/Render 控制台直接修改环境变量
+- 无需修改代码或重新部署
+- 详见 [Railway 配置指南](RAILWAY_SETUP.md#1-使用环境变量管理代理配置)
 
 更多问题见 [部署指南](docs/Render/DEPLOYMENT_GUIDE.md#故障排查)
 

@@ -405,7 +405,7 @@ export default function AutoChat() {
       // 刷新消息源列表
       fetchMessageSources()
     } catch (e: any) {
-      setUploadSourceError(e.message || 'Failed to upload message source')
+      setUploadSourceError(e.message || 'Failed to 上传消息源')
     } finally {
       setUploadingSource(false)
     }
@@ -629,7 +629,7 @@ export default function AutoChat() {
                     : 'bg-blue-500 hover:bg-blue-600'
                 }`}
               >
-                {uploadingSource ? 'Uploading...' : 'Upload Message Source'}
+                {uploadingSource ? 'Uploading...' : '上传消息源'}
               </button>
             </div>
 

@@ -31,25 +31,58 @@ def get_user_sessions_dir(user_email):
 # Emoji list for reactions
 REACTION_EMOJIS = ['👍', '🔥', '🎉', '💯']
 
-# Proxy configurations
-PROXY_CONFIGS = [
-    {
-        'proxy_type': 'socks5',
-        'addr': '102.177.147.43',
-        'port': 50101,
-        'username': 'zhouhaha',
-        'password': '963091790'
-    },
-    {
-        'proxy_type': 'socks5',
-        'addr': '102.177.146.2',
-        'port': 50101,
-        'username': 'zhouhaha',
-        'password': '963091790'
-    },
-]
+# Proxy configurations - 支持从环境变量读取
+def parse_proxy_configs():
+    """
+    从环境变量解析代理配置
+    环境变量格式: PROXY_CONFIGS=socks5://username:password@addr:port,socks5://username:password@addr:port
+    例如: PROXY_CONFIGS=socks5://zhouhaha:963091790@102.177.147.43:50101,socks5://zhouhaha:963091790@102.177.146.2:50101
+    """
+    proxy_env = os.environ.get('PROXY_CONFIGS', '')
+    
+    if proxy_env:
+        proxies = []
+        for proxy_str in proxy_env.split(','):
+            proxy_str = proxy_str.strip()
+            if proxy_str:
+                try:
+                    # 解析格式: socks5://username:password@addr:port
+                    from urllib.parse import urlparse
+                    parsed = urlparse(proxy_str)
+                    proxies.append({
+                        'proxy_type': parsed.scheme,
+                        'addr': parsed.hostname,
+                        'port': parsed.port,
+                        'username': parsed.username,
+                        'password': parsed.password
+                    })
+                except Exception as e:
+                    print(f"Warning: Failed to parse proxy config '{proxy_str}': {e}")
+        
+        if proxies:
+            return proxies
+    
+    # 默认配置（fallback）
+    return [
+        {
+            'proxy_type': 'socks5',
+            'addr': '102.177.147.43',
+            'port': 50101,
+            'username': 'zhouhaha',
+            'password': '963091790'
+        },
+        {
+            'proxy_type': 'socks5',
+            'addr': '102.177.146.2',
+            'port': 50101,
+            'username': 'zhouhaha',
+            'password': '963091790'
+        },
+    ]
+
+PROXY_CONFIGS = parse_proxy_configs()
 
 # Default proxy configuration (used by session_gen.py)
-DEFAULT_PROXY = PROXY_CONFIGS[0]
+DEFAULT_PROXY = PROXY_CONFIGS[0] if PROXY_CONFIGS else None
 
 
