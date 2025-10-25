@@ -66,14 +66,7 @@ def parse_proxy_configs():
     return [
         {
             'proxy_type': 'socks5',
-            'addr': '102.177.147.43',
-            'port': 50101,
-            'username': 'zhouhaha',
-            'password': '963091790'
-        },
-        {
-            'proxy_type': 'socks5',
-            'addr': '102.177.146.2',
+            'addr': '104.219.171.172',
             'port': 50101,
             'username': 'zhouhaha',
             'password': '963091790'
