@@ -39,6 +39,16 @@ export default function ChatScraper() {
   const [scrapeResult, setScrapeResult] = useState<ScrapeResult | null>(null)
   const [isComplete, setIsComplete] = useState(false)
   const [session, setSession] = useState<SessionTest | null>(null)
+  
+  // 时间区间抓取相关状态
+  const [dateGroup, setDateGroup] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [scrapingByDate, setScrapingByDate] = useState(false)
+  const [dateProgress, setDateProgress] = useState<Progress | null>(null)
+  const [dateScrapeResult, setDateScrapeResult] = useState<ScrapeResult | null>(null)
+  const [isDateComplete, setIsDateComplete] = useState(false)
+  const [dateError, setDateError] = useState<string | null>(null)
 
   useEffect(() => {
     // 获取会话信息
@@ -375,6 +385,150 @@ export default function ChatScraper() {
       setError(error.message || '批量删除失败')
     }
   }
+
+  const handleScrapeByDate = async () => {
+    setScrapingByDate(true)
+    setDateError(null)
+    setDateScrapeResult(null)
+    setDateProgress(null)
+    setIsDateComplete(false)
+
+    try {
+      const response = await fetch('/api/chat-scraper/scrape-by-date', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          group: dateGroup,
+          startDate,
+          endDate
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to start scraping')
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('No response stream available')
+      }
+
+      let tempResult: ScrapeResult | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read()
+        
+        if (done) break;
+
+        const text = new TextDecoder().decode(value)
+        const lines = text.split('\n')
+
+        for (const line of lines) {
+          if (!line.trim()) continue
+
+          try {
+            if (line.startsWith('data: ')) {
+              const jsonStr = line.slice(6).trim()
+              if (!jsonStr) continue
+              
+              const data = JSON.parse(jsonStr)
+              
+              if (data.type === 'progress') {
+                setDateProgress(data)
+              } else if (data.type === 'result') {
+                tempResult = data.data
+              } else if (data.type === 'complete') {
+                setIsDateComplete(true)
+                if (tempResult) {
+                  setDateScrapeResult(tempResult)
+                }
+              } else if (data.type === 'error') {
+                setDateError(data.message)
+                break
+              } else if (data.type === 'heartbeat') {
+                console.debug('Received heartbeat:', new Date(data.timestamp))
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing line:', e, 'Line:', line)
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Scraping error:', e)
+      setDateError(e instanceof Error ? e.message : '扒取过程中发生错误，请重试')
+    } finally {
+      setScrapingByDate(false)
+    }
+  }
+
+  const handleDateDownload = async (type: 'csv' | 'all') => {
+    console.log('handleDateDownload called with type:', type)
+    console.log('dateScrapeResult:', dateScrapeResult)
+    console.log('session:', session)
+
+    if (!dateScrapeResult?.csvFile && !dateScrapeResult?.folderPath) {
+      console.error('No file paths in dateScrapeResult')
+      toast.error('文件路径不存在');
+      return;
+    }
+
+    if (!session?.id) {
+      console.error('No session ID')
+      toast.error('用户未登录');
+      return;
+    }
+
+    try {
+      // 使用 dateScrapeResult 中的实际路径，移除开头的 /app/
+      const filePath = type === 'csv' 
+        ? dateScrapeResult.csvFile.replace(/^\/app\//, '')
+        : dateScrapeResult.folderPath.replace(/^\/app\//, '');
+
+      console.log('Sending download request with path:', filePath)
+      
+      const response = await fetch(`/api/chat-scraper/download`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filePath,
+          type
+        })
+      });
+
+      console.log('Download response status:', response.status)
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Download error response:', errorText)
+        throw new Error(errorText || '下载失败');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      // 从 dateScrapeResult 中获取群组名称
+      const groupName = dateScrapeResult.group.replace(/^@/, '');
+      const fileName = type === 'csv' 
+        ? dateScrapeResult.csvFile.split('/').pop() || `${groupName}_messages.csv`
+        : `${groupName}_all.zip`;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('下载开始');
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error(error instanceof Error ? error.message : '下载失败，请重试');
+    }
+  };
 
   return (
     <div suppressHydrationWarning className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
@@ -815,6 +969,206 @@ export default function ChatScraper() {
                   </div>
                   <div className="ml-3">
                     <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Date Range Scraper Section */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">按时间区间抓取群消息</h3>
+              <p className="text-sm text-gray-500">选择时间范围来抓取特定时期的消息</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                群组名称
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  value={dateGroup}
+                  onChange={(e) => setDateGroup(e.target.value)}
+                  placeholder="例如: LSMM8 (不需要 @ 符号)"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-gray-900 font-medium placeholder:text-gray-400"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  开始日期
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                  </div>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-gray-900 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  结束日期
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                  </div>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-gray-900 font-medium"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={handleScrapeByDate}
+                disabled={scrapingByDate || !dateGroup || !startDate || !endDate}
+                className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed disabled:shadow-none flex items-center"
+              >
+                {scrapingByDate ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    抓取中...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    开始抓取
+                  </>
+                )}
+              </button>
+              <p className="mt-3 text-xs text-gray-500 flex items-start">
+                <svg className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+                </svg>
+                按时间区间抓取可能需要较长时间，具体取决于消息数量。抓取完成后会自动显示下载选项。
+              </p>
+            </div>
+
+            {/* Date Range Progress Bar */}
+            {dateProgress && (
+              <div className="mt-6 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-100">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                      <svg className="w-5 h-5 text-indigo-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">正在抓取消息...</p>
+                      <p className="text-xs text-gray-500">{dateProgress.current} / {dateProgress.total} 条消息</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-indigo-600">{Math.round(dateProgress.percentage)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-indigo-500 to-blue-500 h-3 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${dateProgress.percentage}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+
+            {/* Date Range Scrape Results */}
+            {dateScrapeResult && isDateComplete && (
+              <div className="mt-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-green-900">抓取完成！</h4>
+                    <p className="text-sm text-green-600">数据已准备好，可以下载</p>
+                  </div>
+                </div>
+                <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div>
+                    <dt className="text-sm font-medium text-green-600">群组</dt>
+                    <dd className="mt-1 text-sm text-green-900">@{dateScrapeResult.group}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-green-600">总消息数</dt>
+                    <dd className="mt-1 text-sm text-green-900">{dateScrapeResult.totalMessages}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-green-600">媒体文件数</dt>
+                    <dd className="mt-1 text-sm text-green-900">{dateScrapeResult.mediaFiles}</dd>
+                  </div>
+                </dl>
+                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => handleDateDownload('csv')}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    下载 CSV
+                  </button>
+                  <button
+                    onClick={() => handleDateDownload('all')}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                    下载所有文件 (ZIP)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Date Range Error Message */}
+            {dateError && (
+              <div className="bg-red-50 border-l-4 border-red-400 p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-700">{dateError}</p>
                   </div>
                 </div>
               </div>

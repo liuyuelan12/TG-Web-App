@@ -387,6 +387,195 @@ async def scrape_group(client, group_username, message_limit=1000, user_email=No
         }))
         raise e
 
+async def scrape_group_by_date_range(client, group_username, start_date, end_date, user_email=None):
+    """Scrape messages from a group within a date range with progress updates"""
+    try:
+        # Get the input entity with retry
+        MAX_RETRIES = 3
+        RETRY_DELAY = 5
+        entity = None
+        
+        for attempt in range(MAX_RETRIES):
+            try:
+                entity = await client.get_input_entity(group_username)
+                break
+            except Exception as e:
+                if attempt < MAX_RETRIES - 1:
+                    print(json.dumps({
+                        "type": "info",
+                        "message": f"Failed to get entity, attempt {attempt + 1}/{MAX_RETRIES}. Retrying in {RETRY_DELAY} seconds..."
+                    }))
+                    await asyncio.sleep(RETRY_DELAY)
+                else:
+                    raise e
+        
+        if not entity:
+            raise Exception("Failed to get group entity after all retries")
+            
+        # Create necessary directories
+        group_folder = os.path.join(DATA_DIR, user_email, sanitize_filename(group_username))
+        os.makedirs(group_folder, exist_ok=True)
+        media_folder = os.path.join(group_folder, 'media')
+        os.makedirs(media_folder, exist_ok=True)
+        
+        # CSV file path with date range
+        date_str = f"{start_date.strftime('%Y%m%d')}_to_{end_date.strftime('%Y%m%d')}"
+        csv_file = os.path.join(group_folder, f'{sanitize_filename(group_username)}_messages_{date_str}.csv')
+        
+        print(json.dumps({
+            'type': 'info',
+            'message': f'Scraping messages from {start_date} to {end_date}'
+        }))
+        
+        # 第一步：先计算消息总数
+        print(json.dumps({
+            'type': 'info',
+            'message': 'Counting messages in date range...'
+        }))
+        
+        total_messages = 0
+        async for message in client.iter_messages(entity, offset_date=start_date, reverse=True):
+            if message.date > end_date:
+                break
+            total_messages += 1
+            if total_messages % 100 == 0:  # 每100条更新一次计数
+                print(json.dumps({
+                    'type': 'info',
+                    'message': f'Counted {total_messages} messages so far...'
+                }))
+        
+        print(json.dumps({
+            'type': 'start',
+            'total': total_messages
+        }))
+        
+        # 第二步：抓取所有消息内容
+        messages = []
+        processed = 0
+        last_progress = -1
+        last_update_time = time.time()
+        UPDATE_INTERVAL = 2  # 每2秒至少发送一次进度更新
+        
+        print(json.dumps({
+            'type': 'info',
+            'message': 'Step 1: Fetching messages...'
+        }))
+        
+        async for message in client.iter_messages(entity, offset_date=start_date, reverse=True):
+            if message.date > end_date:
+                break
+                
+            processed += 1
+            progress = int((processed / total_messages) * 100) if total_messages > 0 else 0
+            current_time = time.time()
+            
+            if progress != last_progress or (current_time - last_update_time) >= UPDATE_INTERVAL:
+                print(json.dumps({
+                    'type': 'progress',
+                    'current': processed,
+                    'total': total_messages,
+                    'percentage': progress
+                }))
+                last_progress = progress
+                last_update_time = current_time
+            
+            try:
+                # 检查消息发送者是否是机器人
+                if message.sender and hasattr(message.sender, 'bot') and message.sender.bot:
+                    continue  # 跳过机器人的消息
+                    
+                content, msg_type = await get_message_content(message)
+                messages.append({
+                    'id': message.id,
+                    'date': message.date.isoformat(),
+                    'type': msg_type,
+                    'content': content,
+                    'media_file': ''  # 先留空，后面再处理媒体文件
+                })
+            except Exception as e:
+                print(json.dumps({
+                    'type': 'warning',
+                    'message': f'Error processing message {message.id}: {str(e)}'
+                }))
+                continue
+        
+        # 写入消息到CSV
+        print(json.dumps({
+            'type': 'info',
+            'message': 'Writing messages to CSV file...'
+        }))
+        
+        with open(csv_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=['id', 'date', 'type', 'content', 'media_file'])
+            writer.writeheader()
+            writer.writerows(messages)
+        
+        # 在开始处理媒体文件之前，先发送结果信息
+        print(json.dumps({
+            'type': 'result',
+            'data': {
+                'group': group_username,
+                'totalMessages': len(messages),
+                'mediaFiles': len([msg for msg in messages if msg['type'] in ['photo', 'video', 'sticker', 'file']]),
+                'csvFile': csv_file,
+                'folderPath': group_folder
+            }
+        }))
+
+        print(json.dumps({
+            'type': 'info',
+            'message': 'Step 2: Processing media files...'
+        }))
+        
+        # 处理媒体文件
+        media_messages = [msg for msg in messages if msg['type'] in ['photo', 'video', 'sticker', 'file']]
+        for i, msg in enumerate(media_messages, 1):
+            try:
+                print(json.dumps({
+                    'type': 'progress',
+                    'current': i,
+                    'total': len(media_messages),
+                    'percentage': int((i / len(media_messages)) * 100),
+                    'message': f'Processing media file {i}/{len(media_messages)}'
+                }))
+                
+                # 获取原始消息对象
+                msg_obj = await client.get_messages(entity, ids=msg['id'])
+                if msg_obj and msg_obj.media:
+                    media_path = await download_media(msg_obj, group_folder)
+                    if media_path:
+                        msg['media_file'] = media_path
+            except Exception as e:
+                print(json.dumps({
+                    'type': 'warning',
+                    'message': f'Failed to process media for message {msg["id"]}: {str(e)}'
+                }))
+        
+        # 更新CSV中的媒体文件路径
+        print(json.dumps({
+            'type': 'info',
+            'message': 'Updating CSV with media file paths...'
+        }))
+        
+        with open(csv_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=['id', 'date', 'type', 'content', 'media_file'])
+            writer.writeheader()
+            writer.writerows(messages)
+        
+        # 发送完成消息，包含更多信息
+        print(json.dumps({
+            'type': 'complete',
+            'message': 'Successfully scraped messages',
+            'csv_file': csv_file
+        }))
+        
+    except Exception as e:
+        print(json.dumps({
+            'type': 'error',
+            'message': str(e)
+        }))
+        raise e
+
 async def main():
     parser = argparse.ArgumentParser(description='Scrape messages from Telegram group')
     parser.add_argument('--session', required=True, help='Path to session file')
@@ -394,12 +583,25 @@ async def main():
     parser.add_argument('--limit', type=int, default=1000, help='Maximum number of messages to scrape')
     parser.add_argument('--user-email', required=True, help='User email for organizing data')
     parser.add_argument('--timeout', type=int, default=90, help='Timeout in seconds')
+    parser.add_argument('--start-date', help='Start date for date range scraping (YYYY-MM-DD)')
+    parser.add_argument('--end-date', help='End date for date range scraping (YYYY-MM-DD)')
     
     args = parser.parse_args()
     
     try:
         client = await connect_with_session(args.session, args.user_email)
-        await scrape_group(client, args.group, args.limit, args.user_email)
+        
+        # 如果提供了日期范围参数，使用日期范围抓取
+        if args.start_date and args.end_date:
+            from datetime import datetime
+            start_date = datetime.strptime(args.start_date, '%Y-%m-%d')
+            end_date = datetime.strptime(args.end_date, '%Y-%m-%d')
+            # 设置end_date为当天结束时间
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+            await scrape_group_by_date_range(client, args.group, start_date, end_date, args.user_email)
+        else:
+            # 否则使用原来的limit方式
+            await scrape_group(client, args.group, args.limit, args.user_email)
     except Exception as e:
         logging.error(f"Error: {str(e)}")
         sys.exit(1)
