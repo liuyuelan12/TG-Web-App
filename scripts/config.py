@@ -70,7 +70,7 @@ def parse_proxy_configs():
             'port': 50101,
             'username': 'zhouhaha',
             'password': '963091790'
-        },
+        }
     ]
 
 PROXY_CONFIGS = parse_proxy_configs()
