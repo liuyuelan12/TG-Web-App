@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { email } = auth.user!
-    const { group, messageLimit = 1000 } = await request.json()
+    const { group, messageLimit = 1000, topicId, skipMedia } = await request.json()
 
     if (!group) {
       return NextResponse.json(
@@ -115,17 +115,31 @@ export async function POST(request: NextRequest) {
         // Remove @ prefix if exists and clean group name
         const cleanGroupName = group.replace(/^@/, '')
 
-        const process = spawn('python3', [
+        const pythonArgs = [
           scriptPath,
           '--session', sessionPath,
           '--group', cleanGroupName,
           '--limit', messageLimit.toString(),
           '--user-email', email,
           '--timeout', '900'  // 15 分钟
-        ])
+        ]
+        
+        // Add optional topic ID
+        if (topicId) {
+          pythonArgs.push('--topic-id', topicId)
+        }
+        
+        // Add skip-media flag
+        if (skipMedia) {
+          pythonArgs.push('--skip-media')
+        }
+
+        const pythonProcess = spawn('python3', pythonArgs, {
+          env: { ...process.env, PYTHONUNBUFFERED: '1' }
+        })
 
         // Handle stdout
-        process.stdout.on('data', (data: Buffer) => {
+        pythonProcess.stdout.on('data', (data: Buffer) => {
           if (!isControllerClosed && !hasError) {
             try {
               lastActivityTime = Date.now();
@@ -168,7 +182,7 @@ export async function POST(request: NextRequest) {
         })
 
         // Handle stderr
-        process.stderr.on('data', (data: Buffer) => {
+        pythonProcess.stderr.on('data', (data: Buffer) => {
           if (!isControllerClosed && !hasError) {
             lastActivityTime = Date.now();
             const message = data.toString()
@@ -185,7 +199,7 @@ export async function POST(request: NextRequest) {
         })
 
         // Handle process exit
-        process.on('close', (code) => {
+        pythonProcess.on('close', (code: number | null) => {
           cleanup();
           if (!isControllerClosed && !hasError) {
             try {
@@ -204,7 +218,7 @@ export async function POST(request: NextRequest) {
         })
 
         // Handle process errors
-        process.on('error', (error) => {
+        pythonProcess.on('error', (error: Error) => {
           cleanup();
           if (!isControllerClosed) {
             console.error('Process error:', error)
@@ -222,8 +236,8 @@ export async function POST(request: NextRequest) {
         return () => {
           clearInterval(timeoutChecker)
           clearInterval(heartbeatSender)
-          if (!process.killed) {
-            process.kill();
+          if (pythonProcess && !pythonProcess.killed) {
+            pythonProcess.kill('SIGTERM');
           }
         };
       }

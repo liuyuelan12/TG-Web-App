@@ -12,7 +12,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const { email } = auth.user!
-    const { sessionFile, groupUsername, messageLimit } = await request.json()
+    const { sessionFile, groupUsername, messageLimit, topicId, skipMedia } = await request.json()
 
     if (!sessionFile || !groupUsername) {
       return NextResponse.json(
@@ -25,13 +25,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const scriptPath = path.join(process.cwd(), 'scripts', 'scrape_messages.py')
 
     return new Promise((resolve) => {
-      const process = spawn('python3', [
+      const pythonArgs = [
         scriptPath,
         '--session', sessionFile,
         '--group', groupUsername,
         '--limit', messageLimit?.toString() || '1000',
         '--user-email', email
-      ])
+      ]
+      
+      // Add optional topic ID
+      if (topicId) {
+        pythonArgs.push('--topic-id', topicId)
+      }
+      
+      // Add skip-media flag
+      if (skipMedia) {
+        pythonArgs.push('--skip-media')
+      }
+
+      const process = spawn('python3', pythonArgs)
 
       let output = ''
       let error = ''

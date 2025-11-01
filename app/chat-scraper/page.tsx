@@ -33,22 +33,28 @@ export default function ChatScraper() {
   const [results, setResults] = useState<SessionTest[]>([])
   const [group, setGroup] = useState('')
   const [messageLimit, setMessageLimit] = useState(1000)
+  const [normalTopicId, setNormalTopicId] = useState('')
+  const [normalSkipMedia, setNormalSkipMedia] = useState(true)
   const [scraping, setScraping] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<Progress | null>(null)
   const [scrapeResult, setScrapeResult] = useState<ScrapeResult | null>(null)
   const [isComplete, setIsComplete] = useState(false)
   const [session, setSession] = useState<SessionTest | null>(null)
+  const [abortController, setAbortController] = useState<AbortController | null>(null)
   
   // 时间区间抓取相关状态
   const [dateGroup, setDateGroup] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [topicId, setTopicId] = useState('')
+  const [skipMedia, setSkipMedia] = useState(true)
   const [scrapingByDate, setScrapingByDate] = useState(false)
   const [dateProgress, setDateProgress] = useState<Progress | null>(null)
   const [dateScrapeResult, setDateScrapeResult] = useState<ScrapeResult | null>(null)
   const [isDateComplete, setIsDateComplete] = useState(false)
   const [dateError, setDateError] = useState<string | null>(null)
+  const [dateAbortController, setDateAbortController] = useState<AbortController | null>(null)
 
   useEffect(() => {
     // 获取会话信息
@@ -144,12 +150,30 @@ export default function ChatScraper() {
     }
   }
 
+  const handleCancelScrape = () => {
+    if (abortController) {
+      abortController.abort()
+      setAbortController(null)
+    }
+  }
+
+  const handleCancelDateScrape = () => {
+    if (dateAbortController) {
+      dateAbortController.abort()
+      setDateAbortController(null)
+    }
+  }
+
   const handleScrape = async () => {
     setScraping(true)
     setError(null)
     setScrapeResult(null)
     setProgress(null)
     setIsComplete(false)
+
+    // 创建新的 AbortController
+    const controller = new AbortController()
+    setAbortController(controller)
 
     try {
       const response = await fetch('/api/chat-scraper/scrape-group', {
@@ -159,8 +183,11 @@ export default function ChatScraper() {
         },
         body: JSON.stringify({
           group,
-          messageLimit
-        })
+          messageLimit,
+          topicId: normalTopicId || undefined,
+          skipMedia: normalSkipMedia
+        }),
+        signal: controller.signal
       })
 
       if (!response.ok) {
@@ -215,9 +242,14 @@ export default function ChatScraper() {
       }
     } catch (e) {
       console.error('Scraping error:', e)
-      setError(e instanceof Error ? e.message : '扒取过程中发生错误，请重试')
+      if (e instanceof Error && e.name === 'AbortError') {
+        setError('抓取已取消')
+      } else {
+        setError(e instanceof Error ? e.message : '扒取过程中发生错误，请重试')
+      }
     } finally {
       setScraping(false)
+      setAbortController(null)
     }
   }
 
@@ -239,11 +271,17 @@ export default function ChatScraper() {
     }
 
     try {
-      // 使用 scrapeResult 中的实际路径，移除开头的 /app/
-      const filePath = type === 'csv' 
-        ? scrapeResult.csvFile.replace(/^\/app\//, '')
-        : scrapeResult.folderPath.replace(/^\/app\//, '');
-
+      // 从绝对路径中提取相对路径（scraped_data/...）
+      const absolutePath = type === 'csv' ? scrapeResult.csvFile : scrapeResult.folderPath;
+      const scrapedDataIndex = absolutePath.indexOf('scraped_data');
+      
+      if (scrapedDataIndex === -1) {
+        console.error('Invalid path format:', absolutePath);
+        toast.error('文件路径格式错误');
+        return;
+      }
+      
+      const filePath = absolutePath.substring(scrapedDataIndex);
       console.log('Sending download request with path:', filePath)
       
       const response = await fetch(`/api/chat-scraper/download`, {
@@ -393,6 +431,10 @@ export default function ChatScraper() {
     setDateProgress(null)
     setIsDateComplete(false)
 
+    // 创建新的 AbortController
+    const controller = new AbortController()
+    setDateAbortController(controller)
+
     try {
       const response = await fetch('/api/chat-scraper/scrape-by-date', {
         method: 'POST',
@@ -402,8 +444,11 @@ export default function ChatScraper() {
         body: JSON.stringify({
           group: dateGroup,
           startDate,
-          endDate
-        })
+          endDate,
+          topicId: topicId || undefined,
+          skipMedia
+        }),
+        signal: controller.signal
       })
 
       if (!response.ok) {
@@ -458,9 +503,14 @@ export default function ChatScraper() {
       }
     } catch (e) {
       console.error('Scraping error:', e)
-      setDateError(e instanceof Error ? e.message : '扒取过程中发生错误，请重试')
+      if (e instanceof Error && e.name === 'AbortError') {
+        setDateError('抓取已取消')
+      } else {
+        setDateError(e instanceof Error ? e.message : '扒取过程中发生错误，请重试')
+      }
     } finally {
       setScrapingByDate(false)
+      setDateAbortController(null)
     }
   }
 
@@ -482,11 +532,17 @@ export default function ChatScraper() {
     }
 
     try {
-      // 使用 dateScrapeResult 中的实际路径，移除开头的 /app/
-      const filePath = type === 'csv' 
-        ? dateScrapeResult.csvFile.replace(/^\/app\//, '')
-        : dateScrapeResult.folderPath.replace(/^\/app\//, '');
-
+      // 从绝对路径中提取相对路径（scraped_data/...）
+      const absolutePath = type === 'csv' ? dateScrapeResult.csvFile : dateScrapeResult.folderPath;
+      const scrapedDataIndex = absolutePath.indexOf('scraped_data');
+      
+      if (scrapedDataIndex === -1) {
+        console.error('Invalid path format:', absolutePath);
+        toast.error('文件路径格式错误');
+        return;
+      }
+      
+      const filePath = absolutePath.substring(scrapedDataIndex);
       console.log('Sending download request with path:', filePath)
       
       const response = await fetch(`/api/chat-scraper/download`, {
@@ -850,11 +906,46 @@ export default function ChatScraper() {
               </div>
             </div>
 
-            <div className="pt-2">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Topic ID (可选)
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  value={normalTopicId}
+                  onChange={(e) => setNormalTopicId(e.target.value)}
+                  placeholder="留空表示抓取默认Topic"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 font-medium placeholder:text-gray-400"
+                />
+              </div>
+              <p className="mt-1 text-xs text-gray-500">Topic Group中的特定Topic ID</p>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <input
+                type="checkbox"
+                id="normalSkipMedia"
+                checked={normalSkipMedia}
+                onChange={(e) => setNormalSkipMedia(e.target.checked)}
+                className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+              />
+              <label htmlFor="normalSkipMedia" className="flex-1 cursor-pointer">
+                <span className="text-sm font-semibold text-gray-900">跳过媒体文件下载</span>
+                <p className="text-xs text-gray-500 mt-0.5">勾选后只抓取文字消息，不下载图片、视频等媒体文件（推荐，速度更快）</p>
+              </label>
+            </div>
+
+            <div className="pt-2 flex gap-3">
               <button
                 onClick={handleScrape}
                 disabled={scraping || !group}
-                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed disabled:shadow-none flex items-center"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center"
               >
                 {scraping ? (
                   <>
@@ -873,13 +964,24 @@ export default function ChatScraper() {
                   </>
                 )}
               </button>
-              <p className="mt-3 text-xs text-gray-500 flex items-start">
-                <svg className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
-                </svg>
-                扒取过程花费时间较长，1000条消息可能高达20分钟，请耐心等待。扒取完成后会自动显示下载选项。
-              </p>
+              {scraping && (
+                <button
+                  onClick={handleCancelScrape}
+                  className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  取消
+                </button>
+              )}
             </div>
+            <p className="mt-3 text-xs text-gray-500 flex items-start">
+              <svg className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+              </svg>
+              扒取过程花费时间较长，1000条消息可能高达20分钟，请耐心等待。扒取完成后会自动显示下载选项。
+            </p>
 
             {/* Progress Bar */}
             {progress && (
@@ -1010,6 +1112,27 @@ export default function ChatScraper() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Topic ID (可选)
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  value={topicId}
+                  onChange={(e) => setTopicId(e.target.value)}
+                  placeholder="留空表示抓取默认Topic"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-gray-900 font-medium placeholder:text-gray-400"
+                />
+              </div>
+              <p className="mt-1 text-xs text-gray-500">Topic Group中的特定Topic ID，留空则抓取所有消息</p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1050,11 +1173,25 @@ export default function ChatScraper() {
               </div>
             </div>
 
-            <div className="pt-2">
+            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <input
+                type="checkbox"
+                id="skipMedia"
+                checked={skipMedia}
+                onChange={(e) => setSkipMedia(e.target.checked)}
+                className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2"
+              />
+              <label htmlFor="skipMedia" className="flex-1 cursor-pointer">
+                <span className="text-sm font-semibold text-gray-900">跳过媒体文件下载</span>
+                <p className="text-xs text-gray-500 mt-0.5">勾选后只抓取文字消息，不下载图片、视频等媒体文件（推荐，速度更快）</p>
+              </label>
+            </div>
+
+            <div className="pt-2 flex gap-3">
               <button
                 onClick={handleScrapeByDate}
                 disabled={scrapingByDate || !dateGroup || !startDate || !endDate}
-                className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed disabled:shadow-none flex items-center"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center"
               >
                 {scrapingByDate ? (
                   <>
@@ -1073,13 +1210,24 @@ export default function ChatScraper() {
                   </>
                 )}
               </button>
-              <p className="mt-3 text-xs text-gray-500 flex items-start">
-                <svg className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
-                </svg>
-                按时间区间抓取可能需要较长时间，具体取决于消息数量。抓取完成后会自动显示下载选项。
-              </p>
+              {scrapingByDate && (
+                <button
+                  onClick={handleCancelDateScrape}
+                  className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  取消
+                </button>
+              )}
             </div>
+            <p className="mt-3 text-xs text-gray-500 flex items-start">
+              <svg className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+              </svg>
+              按时间区间抓取可能需要较长时间，具体取决于消息数量。抓取完成后会自动显示下载选项。
+            </p>
 
             {/* Date Range Progress Bar */}
             {dateProgress && (
