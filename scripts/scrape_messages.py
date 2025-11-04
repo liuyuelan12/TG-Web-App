@@ -519,11 +519,42 @@ async def scrape_group_by_date_range(client, group_username, start_date, end_dat
             
             try:
                 content, msg_type = await get_message_content(message)
+                
+                # 获取发送者的username
+                username = ''
+                if message.sender:
+                    if hasattr(message.sender, 'username') and message.sender.username:
+                        username = message.sender.username
+                    elif hasattr(message.sender, 'first_name'):
+                        username = message.sender.first_name or ''
+                        if hasattr(message.sender, 'last_name') and message.sender.last_name:
+                            username += f' {message.sender.last_name}'
+                
+                # 生成消息链接
+                message_link = ''
+                try:
+                    # 获取chat信息以构建链接
+                    chat = await client.get_entity(entity)
+                    if hasattr(chat, 'username') and chat.username:
+                        # 公开群组/频道
+                        message_link = f'https://t.me/{chat.username}/{message.id}'
+                    else:
+                        # 私有群组/频道
+                        # 对于私有频道，使用 chat_id（去掉-100前缀）
+                        chat_id = str(chat.id)
+                        if chat_id.startswith('-100'):
+                            chat_id = chat_id[4:]  # 去掉 -100 前缀
+                        message_link = f'https://t.me/c/{chat_id}/{message.id}'
+                except:
+                    message_link = f'Message ID: {message.id}'
+                
                 messages.append({
                     'id': message.id,
                     'date': message.date.isoformat(),
                     'type': msg_type,
                     'content': content,
+                    'username': username,
+                    'message_link': message_link,
                     'media_file': ''  # Will be filled if media is downloaded
                 })
             except Exception as e:
@@ -540,7 +571,7 @@ async def scrape_group_by_date_range(client, group_username, start_date, end_dat
         })
         
         with open(csv_file, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=['id', 'date', 'type', 'content', 'media_file'])
+            writer = csv.DictWriter(f, fieldnames=['id', 'date', 'type', 'content', 'username', 'message_link', 'media_file'])
             writer.writeheader()
             writer.writerows(messages)
         
@@ -584,7 +615,7 @@ async def scrape_group_by_date_range(client, group_username, start_date, end_dat
             })
             
             with open(csv_file, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=['id', 'date', 'type', 'content', 'media_file'])
+                writer = csv.DictWriter(f, fieldnames=['id', 'date', 'type', 'content', 'username', 'message_link', 'media_file'])
                 writer.writeheader()
                 writer.writerows(messages)
         
