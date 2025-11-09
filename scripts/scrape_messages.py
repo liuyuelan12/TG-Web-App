@@ -7,6 +7,7 @@ sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
 sys.stderr.reconfigure(encoding='utf-8', line_buffering=True)
 
 from telethon import TelegramClient, events, functions, types
+from telethon.errors import NetworkError, TimeoutError, FloodWaitError
 import csv
 from datetime import datetime
 import asyncio
@@ -16,6 +17,7 @@ import logging
 from pathlib import Path
 import argparse
 import random
+import time
 from config import (
     API_ID,
     API_HASH,
@@ -55,6 +57,64 @@ os.makedirs(SESSIONS_DIR, exist_ok=True)
 def sanitize_filename(filename):
     """Clean filename, remove illegal characters"""
     return "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.'))
+
+def load_checkpoint(csv_file):
+    """Load previously scraped message IDs from checkpoint file"""
+    checkpoint_file = f'{csv_file}.tmp'
+    scraped_messages = []
+    scraped_ids = set()
+    
+    if os.path.exists(checkpoint_file):
+        try:
+            with open(checkpoint_file, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    scraped_messages.append(row)
+                    scraped_ids.add(int(row['id']))
+            print_json({
+                'type': 'info',
+                'message': f'Resuming from checkpoint: {len(scraped_messages)} messages already scraped'
+            })
+        except Exception as e:
+            print_json({
+                'type': 'warning',
+                'message': f'Failed to load checkpoint: {str(e)}. Starting fresh.'
+            })
+            scraped_messages = []
+            scraped_ids = set()
+    
+    return scraped_messages, scraped_ids
+
+def save_checkpoint(csv_file, messages, fieldnames):
+    """Save current progress to checkpoint file"""
+    checkpoint_file = f'{csv_file}.tmp'
+    try:
+        with open(checkpoint_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(messages)
+    except Exception as e:
+        print_json({
+            'type': 'warning',
+            'message': f'Failed to save checkpoint: {str(e)}'
+        })
+
+def finalize_csv(csv_file, messages, fieldnames):
+    """Finalize CSV file and remove checkpoint"""
+    checkpoint_file = f'{csv_file}.tmp'
+    
+    # Write final CSV
+    with open(csv_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(messages)
+    
+    # Remove checkpoint file
+    if os.path.exists(checkpoint_file):
+        try:
+            os.remove(checkpoint_file)
+        except:
+            pass
 
 async def download_media(message, group_folder):
     """Download media files"""
@@ -284,63 +344,101 @@ async def scrape_group(client, group_username, message_limit=1000, user_email=No
             'total': target_messages
         })
         
+        # 加载断点（如果存在）
+        fieldnames = ['id', 'date', 'type', 'content', 'media_file']
+        messages, scraped_ids = load_checkpoint(csv_file)
+        processed = len(messages)
+        
         # 第一步：先抓取所有消息内容
-        messages = []
-        processed = 0
         last_progress = -1
         last_update_time = time.time()
         UPDATE_INTERVAL = 2  # 每2秒至少发送一次进度更新
+        SAVE_INTERVAL = 100  # 每100条消息保存一次
+        MAX_NETWORK_RETRIES = 3
+        NETWORK_RETRY_DELAY = 10
         
         print_json({
             'type': 'info',
-            'message': 'Fetching messages...'
+            'message': f'Fetching messages... (starting from {processed} already scraped)'
         })
         
-        async for message in client.iter_messages(entity, **iter_params):
-            # Skip bot messages
-            if message.sender and hasattr(message.sender, 'bot') and message.sender.bot:
-                continue
-                
-            processed += 1
-            progress = int((processed / target_messages) * 100) if target_messages > 0 else 0
-            current_time = time.time()
-            
-            if progress != last_progress or (current_time - last_update_time) >= UPDATE_INTERVAL:
-                print_json({
-                    'type': 'progress',
-                    'current': processed,
-                    'total': target_messages,
-                    'percentage': progress
-                })
-                last_progress = progress
-                last_update_time = current_time
-            
+        network_retry_count = 0
+        while network_retry_count < MAX_NETWORK_RETRIES:
             try:
-                content, msg_type = await get_message_content(message)
-                messages.append({
-                    'id': message.id,
-                    'date': message.date.isoformat(),
-                    'type': msg_type,
-                    'content': content,
-                    'media_file': ''  # Will be filled if media is downloaded
-                })
-            except Exception as e:
-                print_json({
-                    'type': 'warning',
-                    'message': f'Error processing message {message.id}: {str(e)}'
-                })
-                continue
+                async for message in client.iter_messages(entity, **iter_params):
+                    # Skip bot messages
+                    if message.sender and hasattr(message.sender, 'bot') and message.sender.bot:
+                        continue
+                    
+                    # Skip already scraped messages
+                    if message.id in scraped_ids:
+                        continue
+                        
+                    processed += 1
+                    progress = int((processed / target_messages) * 100) if target_messages > 0 else 0
+                    current_time = time.time()
+                    
+                    if progress != last_progress or (current_time - last_update_time) >= UPDATE_INTERVAL:
+                        print_json({
+                            'type': 'progress',
+                            'current': processed,
+                            'total': target_messages,
+                            'percentage': progress
+                        })
+                        last_progress = progress
+                        last_update_time = current_time
+                    
+                    try:
+                        content, msg_type = await get_message_content(message)
+                        messages.append({
+                            'id': message.id,
+                            'date': message.date.isoformat(),
+                            'type': msg_type,
+                            'content': content,
+                            'media_file': ''  # Will be filled if media is downloaded
+                        })
+                        scraped_ids.add(message.id)
+                        
+                        # 增量保存
+                        if len(messages) % SAVE_INTERVAL == 0:
+                            save_checkpoint(csv_file, messages, fieldnames)
+                            
+                    except Exception as e:
+                        print_json({
+                            'type': 'warning',
+                            'message': f'Error processing message {message.id}: {str(e)}'
+                        })
+                        continue
+                
+                # 成功完成，退出重试循环
+                break
+                
+            except (NetworkError, TimeoutError, ConnectionError) as e:
+                network_retry_count += 1
+                if network_retry_count < MAX_NETWORK_RETRIES:
+                    # 保存当前进度
+                    save_checkpoint(csv_file, messages, fieldnames)
+                    print_json({
+                        'type': 'warning',
+                        'message': f'Network error occurred: {str(e)}. Retrying {network_retry_count}/{MAX_NETWORK_RETRIES} in {NETWORK_RETRY_DELAY} seconds...'
+                    })
+                    await asyncio.sleep(NETWORK_RETRY_DELAY)
+                else:
+                    # 保存当前进度后抛出错误
+                    save_checkpoint(csv_file, messages, fieldnames)
+                    print_json({
+                        'type': 'error',
+                        'message': f'Network error after {MAX_NETWORK_RETRIES} retries. Saved {len(messages)} messages to checkpoint.'
+                    }, file=sys.stderr)
+                    raise
         
-        # 写入消息到CSV
+        # 最终保存并清理checkpoint
         print_json({
             'type': 'info',
-            'message': 'Writing messages to CSV file...'
+            'message': 'Finalizing CSV file...'
         })
         
-        with open(csv_file, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=['id', 'date', 'type', 'content', 'media_file'])
-            writer.writeheader()
-            writer.writerows(messages)
+        finalize_csv(csv_file, messages, fieldnames)
         
         # 如果不跳过媒体，则处理媒体文件
         if not skip_media:
@@ -483,97 +581,135 @@ async def scrape_group_by_date_range(client, group_username, start_date, end_dat
             'total': total_messages
         })
         
+        # 加载断点（如果存在）
+        fieldnames = ['id', 'date', 'type', 'content', 'username', 'message_link', 'media_file']
+        messages, scraped_ids = load_checkpoint(csv_file)
+        processed = len(messages)
+        
         # 第二步：抓取所有消息内容
-        messages = []
-        processed = 0
         last_progress = -1
         last_update_time = time.time()
         UPDATE_INTERVAL = 2  # 每2秒至少发送一次进度更新
+        SAVE_INTERVAL = 100  # 每100条消息保存一次
+        MAX_NETWORK_RETRIES = 3
+        NETWORK_RETRY_DELAY = 10
         
         print_json({
             'type': 'info',
-            'message': 'Fetching messages...'
+            'message': f'Fetching messages... (starting from {processed} already scraped)'
         })
         
-        async for message in client.iter_messages(entity, **iter_params):
-            if message.date > end_date:
-                break
-            
-            # Skip bot messages
-            if message.sender and hasattr(message.sender, 'bot') and message.sender.bot:
-                continue
-                
-            processed += 1
-            progress = int((processed / total_messages) * 100) if total_messages > 0 else 0
-            current_time = time.time()
-            
-            if progress != last_progress or (current_time - last_update_time) >= UPDATE_INTERVAL:
-                print_json({
-                    'type': 'progress',
-                    'current': processed,
-                    'total': total_messages,
-                    'percentage': progress
-                })
-                last_progress = progress
-                last_update_time = current_time
-            
+        network_retry_count = 0
+        while network_retry_count < MAX_NETWORK_RETRIES:
             try:
-                content, msg_type = await get_message_content(message)
+                async for message in client.iter_messages(entity, **iter_params):
+                    if message.date > end_date:
+                        break
+                    
+                    # Skip bot messages
+                    if message.sender and hasattr(message.sender, 'bot') and message.sender.bot:
+                        continue
+                    
+                    # Skip already scraped messages
+                    if message.id in scraped_ids:
+                        continue
+                        
+                    processed += 1
+                    progress = int((processed / total_messages) * 100) if total_messages > 0 else 0
+                    current_time = time.time()
+                    
+                    if progress != last_progress or (current_time - last_update_time) >= UPDATE_INTERVAL:
+                        print_json({
+                            'type': 'progress',
+                            'current': processed,
+                            'total': total_messages,
+                            'percentage': progress
+                        })
+                        last_progress = progress
+                        last_update_time = current_time
+                    
+                    try:
+                        content, msg_type = await get_message_content(message)
+                        
+                        # 获取发送者的username
+                        username = ''
+                        if message.sender:
+                            if hasattr(message.sender, 'username') and message.sender.username:
+                                username = message.sender.username
+                            elif hasattr(message.sender, 'first_name'):
+                                username = message.sender.first_name or ''
+                                if hasattr(message.sender, 'last_name') and message.sender.last_name:
+                                    username += f' {message.sender.last_name}'
+                        
+                        # 生成消息链接
+                        message_link = ''
+                        try:
+                            # 获取chat信息以构建链接
+                            chat = await client.get_entity(entity)
+                            if hasattr(chat, 'username') and chat.username:
+                                # 公开群组/频道
+                                message_link = f'https://t.me/{chat.username}/{message.id}'
+                            else:
+                                # 私有群组/频道
+                                # 对于私有频道，使用 chat_id（去掉-100前缀）
+                                chat_id = str(chat.id)
+                                if chat_id.startswith('-100'):
+                                    chat_id = chat_id[4:]  # 去掉 -100 前缀
+                                message_link = f'https://t.me/c/{chat_id}/{message.id}'
+                        except:
+                            message_link = f'Message ID: {message.id}'
+                        
+                        messages.append({
+                            'id': message.id,
+                            'date': message.date.isoformat(),
+                            'type': msg_type,
+                            'content': content,
+                            'username': username,
+                            'message_link': message_link,
+                            'media_file': ''  # Will be filled if media is downloaded
+                        })
+                        scraped_ids.add(message.id)
+                        
+                        # 增量保存
+                        if len(messages) % SAVE_INTERVAL == 0:
+                            save_checkpoint(csv_file, messages, fieldnames)
+                            
+                    except Exception as e:
+                        print_json({
+                            'type': 'warning',
+                            'message': f'Error processing message {message.id}: {str(e)}'
+                        })
+                        continue
                 
-                # 获取发送者的username
-                username = ''
-                if message.sender:
-                    if hasattr(message.sender, 'username') and message.sender.username:
-                        username = message.sender.username
-                    elif hasattr(message.sender, 'first_name'):
-                        username = message.sender.first_name or ''
-                        if hasattr(message.sender, 'last_name') and message.sender.last_name:
-                            username += f' {message.sender.last_name}'
+                # 成功完成，退出重试循环
+                break
                 
-                # 生成消息链接
-                message_link = ''
-                try:
-                    # 获取chat信息以构建链接
-                    chat = await client.get_entity(entity)
-                    if hasattr(chat, 'username') and chat.username:
-                        # 公开群组/频道
-                        message_link = f'https://t.me/{chat.username}/{message.id}'
-                    else:
-                        # 私有群组/频道
-                        # 对于私有频道，使用 chat_id（去掉-100前缀）
-                        chat_id = str(chat.id)
-                        if chat_id.startswith('-100'):
-                            chat_id = chat_id[4:]  # 去掉 -100 前缀
-                        message_link = f'https://t.me/c/{chat_id}/{message.id}'
-                except:
-                    message_link = f'Message ID: {message.id}'
-                
-                messages.append({
-                    'id': message.id,
-                    'date': message.date.isoformat(),
-                    'type': msg_type,
-                    'content': content,
-                    'username': username,
-                    'message_link': message_link,
-                    'media_file': ''  # Will be filled if media is downloaded
-                })
-            except Exception as e:
-                print_json({
-                    'type': 'warning',
-                    'message': f'Error processing message {message.id}: {str(e)}'
-                })
-                continue
+            except (NetworkError, TimeoutError, ConnectionError) as e:
+                network_retry_count += 1
+                if network_retry_count < MAX_NETWORK_RETRIES:
+                    # 保存当前进度
+                    save_checkpoint(csv_file, messages, fieldnames)
+                    print_json({
+                        'type': 'warning',
+                        'message': f'Network error occurred: {str(e)}. Retrying {network_retry_count}/{MAX_NETWORK_RETRIES} in {NETWORK_RETRY_DELAY} seconds...'
+                    })
+                    await asyncio.sleep(NETWORK_RETRY_DELAY)
+                else:
+                    # 保存当前进度后抛出错误
+                    save_checkpoint(csv_file, messages, fieldnames)
+                    print_json({
+                        'type': 'error',
+                        'message': f'Network error after {MAX_NETWORK_RETRIES} retries. Saved {len(messages)} messages to checkpoint.'
+                    }, file=sys.stderr)
+                    raise
         
-        # 写入消息到CSV
+        # 最终保存并清理checkpoint
         print_json({
             'type': 'info',
-            'message': 'Writing messages to CSV file...'
+            'message': 'Finalizing CSV file...'
         })
         
-        with open(csv_file, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=['id', 'date', 'type', 'content', 'username', 'message_link', 'media_file'])
-            writer.writeheader()
-            writer.writerows(messages)
+        finalize_csv(csv_file, messages, fieldnames)
         
         # 如果不跳过媒体，则处理媒体文件
         if not skip_media:
