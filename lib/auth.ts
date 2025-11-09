@@ -21,7 +21,7 @@ export interface AuthResult {
 export interface JwtPayload extends JWTPayload {
   email: string
   isAdmin: boolean
-  expiresAt: string
+  expiresAt?: string | null
 }
 
 export async function getJwtPayload(request: NextRequest): Promise<JwtPayload | null> {
@@ -38,10 +38,15 @@ export async function getJwtPayload(request: NextRequest): Promise<JwtPayload | 
     // 验证必要的字段是否存在
     if (
       typeof payload.email !== 'string' ||
-      typeof payload.isAdmin !== 'boolean' ||
-      typeof payload.expiresAt !== 'string'
+      typeof payload.isAdmin !== 'boolean'
     ) {
       console.error('Invalid token payload:', payload)
+      return null
+    }
+    
+    // expiresAt 是可选的，如果存在则需要是字符串
+    if (payload.expiresAt !== undefined && payload.expiresAt !== null && typeof payload.expiresAt !== 'string') {
+      console.error('Invalid expiresAt in token payload:', payload.expiresAt)
       return null
     }
 
@@ -69,7 +74,7 @@ export async function verifyAuth(request: NextRequest, requireAdmin = false): Pr
     const { payload } = await jwtVerify(token.value, JWT_SECRET)
     const email = payload.email as string
     const isAdmin = payload.isAdmin as boolean
-    const tokenExpiresAt = payload.expiresAt as string
+    const tokenExpiresAt = payload.expiresAt as string | undefined | null
 
     if (!email) {
       return {

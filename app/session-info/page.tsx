@@ -180,7 +180,7 @@ export default function SessionInfo() {
             <form onSubmit={handleUpdate} className="space-y-4">
               {/* 通用错误提示 */}
               {formErrors.general && (
-                <div className="text-red-500 text-sm p-2 bg-red-50 rounded">{formErrors.general}</div>
+                <div className="text-red-500 text-sm p-2 bg-red-50 rounded whitespace-pre-line">{formErrors.general}</div>
               )}
 
               <div>
@@ -227,7 +227,7 @@ export default function SessionInfo() {
                     placeholder="username"
                   />
                   {formErrors.username && (
-                    <div className="text-red-500 text-sm mt-1">{formErrors.username}</div>
+                    <div className="text-red-500 text-sm mt-1 whitespace-pre-line">{formErrors.username}</div>
                   )}
                 </div>
                 <p className="mt-1 text-sm text-gray-700">不需要输入@符号</p>

@@ -8,7 +8,8 @@ from telethon.errors import (
     FloodWaitError,
     UsernameOccupiedError,
     UsernameNotModifiedError,
-    UsernameInvalidError
+    UsernameInvalidError,
+    RPCError
 )
 from telethon.tl.functions.account import UpdateProfileRequest, UpdateUsernameRequest
 from telethon.tl.functions.photos import UploadProfilePhotoRequest
@@ -126,6 +127,25 @@ async def update_profile(user_email: str, session_name: str, first_name: str = N
                             }
                         except UsernameNotModifiedError:
                             logger.info(f"用户名未变化，跳过更新: {username}")
+                        except RPCError as e:
+                            # 处理 Telegram API 返回的各种限制错误
+                            error_msg = str(e)
+                            logger.error(f"更新用户名时出错: {error_msg}")
+                            
+                            if 'FROZEN_METHOD_INVALID' in error_msg or 'USERNAME_NOT_MODIFIED' in error_msg:
+                                return {
+                                    'success': False,
+                                    'error': 'Unable to change username. Possible reasons:\n'
+                                             '• Your account is too new (wait a few days)\n'
+                                             '• You recently changed your username (wait 15-30 days)\n'
+                                             '• Your account has restrictions from Telegram\n'
+                                             '• This feature is temporarily unavailable for your account'
+                                }
+                            else:
+                                return {
+                                    'success': False,
+                                    'error': f'Failed to update username: {error_msg}'
+                                }
                         except Exception as e:
                             logger.error(f"更新用户名时出错: {str(e)}")
                             return {
