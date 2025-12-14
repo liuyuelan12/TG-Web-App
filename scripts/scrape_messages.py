@@ -7,7 +7,7 @@ sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
 sys.stderr.reconfigure(encoding='utf-8', line_buffering=True)
 
 from telethon import TelegramClient, events, functions, types
-from telethon.errors import NetworkError, TimeoutError, FloodWaitError
+from telethon.errors import FloodWaitError, RPCError
 import csv
 from datetime import datetime
 import asyncio
@@ -413,7 +413,7 @@ async def scrape_group(client, group_username, message_limit=1000, user_email=No
                 # 成功完成，退出重试循环
                 break
                 
-            except (NetworkError, TimeoutError, ConnectionError) as e:
+            except (RPCError, ConnectionError, OSError, asyncio.TimeoutError) as e:
                 network_retry_count += 1
                 if network_retry_count < MAX_NETWORK_RETRIES:
                     # 保存当前进度
@@ -684,7 +684,7 @@ async def scrape_group_by_date_range(client, group_username, start_date, end_dat
                 # 成功完成，退出重试循环
                 break
                 
-            except (NetworkError, TimeoutError, ConnectionError) as e:
+            except (RPCError, ConnectionError, OSError, asyncio.TimeoutError) as e:
                 network_retry_count += 1
                 if network_retry_count < MAX_NETWORK_RETRIES:
                     # 保存当前进度

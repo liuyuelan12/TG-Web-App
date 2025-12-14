@@ -175,6 +175,8 @@ export default function ChatScraper() {
     const controller = new AbortController()
     setAbortController(controller)
 
+    let tempResult: ScrapeResult | null = null;
+
     try {
       const response = await fetch('/api/chat-scraper/scrape-group', {
         method: 'POST',
@@ -199,8 +201,6 @@ export default function ChatScraper() {
         throw new Error('No response stream available')
       }
 
-      let tempResult: ScrapeResult | null = null;
-
       while (true) {
         const { done, value } = await reader.read()
         
@@ -221,6 +221,18 @@ export default function ChatScraper() {
               
               if (data.type === 'progress') {
                 setProgress(data)
+                // 构建临时result对象，即使后续出错也能下载部分数据
+                if (!tempResult && data.current > 0) {
+                  tempResult = {
+                    group: group,
+                    totalMessages: data.current,
+                    mediaFiles: 0,
+                    csvFile: '', // 将由后端根据实际文件确定
+                    folderPath: ''
+                  }
+                } else if (tempResult) {
+                  tempResult.totalMessages = data.current
+                }
               } else if (data.type === 'result') {
                 tempResult = data.data
               } else if (data.type === 'complete') {
@@ -247,6 +259,10 @@ export default function ChatScraper() {
       } else {
         setError(e instanceof Error ? e.message : '扒取过程中发生错误，请重试')
       }
+      // 即使出错，如果有部分结果，也保存下来供用户下载
+      if (tempResult) {
+        setScrapeResult(tempResult)
+      }
     } finally {
       setScraping(false)
       setAbortController(null)
@@ -258,9 +274,9 @@ export default function ChatScraper() {
     console.log('scrapeResult:', scrapeResult)
     console.log('session:', session)
 
-    if (!scrapeResult?.csvFile && !scrapeResult?.folderPath) {
-      console.error('No file paths in scrapeResult')
-      toast.error('文件路径不存在');
+    if (!scrapeResult) {
+      console.error('No scrapeResult')
+      toast.error('没有可下载的数据');
       return;
     }
 
@@ -271,18 +287,19 @@ export default function ChatScraper() {
     }
 
     try {
-      // 从绝对路径中提取相对路径（scraped_data/...）
-      const absolutePath = type === 'csv' ? scrapeResult.csvFile : scrapeResult.folderPath;
-      const scrapedDataIndex = absolutePath.indexOf('scraped_data');
+      let filePath = '';
       
-      if (scrapedDataIndex === -1) {
-        console.error('Invalid path format:', absolutePath);
-        toast.error('文件路径格式错误');
-        return;
+      // 如果有完整的文件路径，从绝对路径中提取相对路径
+      if (scrapeResult.csvFile || scrapeResult.folderPath) {
+        const absolutePath = type === 'csv' ? scrapeResult.csvFile : scrapeResult.folderPath;
+        const scrapedDataIndex = absolutePath.indexOf('scraped_data');
+        
+        if (scrapedDataIndex !== -1) {
+          filePath = absolutePath.substring(scrapedDataIndex);
+        }
       }
       
-      const filePath = absolutePath.substring(scrapedDataIndex);
-      console.log('Sending download request with path:', filePath)
+      console.log('Sending download request with path:', filePath, 'group:', scrapeResult.group)
       
       const response = await fetch(`/api/chat-scraper/download`, {
         method: 'POST',
@@ -291,7 +308,9 @@ export default function ChatScraper() {
         },
         body: JSON.stringify({
           filePath,
-          type
+          type,
+          group: scrapeResult.group,
+          topicId: normalTopicId || undefined
         })
       });
 
@@ -435,6 +454,8 @@ export default function ChatScraper() {
     const controller = new AbortController()
     setDateAbortController(controller)
 
+    let tempResult: ScrapeResult | null = null;
+
     try {
       const response = await fetch('/api/chat-scraper/scrape-by-date', {
         method: 'POST',
@@ -460,8 +481,6 @@ export default function ChatScraper() {
         throw new Error('No response stream available')
       }
 
-      let tempResult: ScrapeResult | null = null;
-
       while (true) {
         const { done, value } = await reader.read()
         
@@ -482,6 +501,18 @@ export default function ChatScraper() {
               
               if (data.type === 'progress') {
                 setDateProgress(data)
+                // 构建临时result对象，即使后续出错也能下载部分数据
+                if (!tempResult && data.current > 0) {
+                  tempResult = {
+                    group: dateGroup,
+                    totalMessages: data.current,
+                    mediaFiles: 0,
+                    csvFile: '', // 将由后端根据实际文件确定
+                    folderPath: ''
+                  }
+                } else if (tempResult) {
+                  tempResult.totalMessages = data.current
+                }
               } else if (data.type === 'result') {
                 tempResult = data.data
               } else if (data.type === 'complete') {
@@ -508,6 +539,10 @@ export default function ChatScraper() {
       } else {
         setDateError(e instanceof Error ? e.message : '扒取过程中发生错误，请重试')
       }
+      // 即使出错，如果有部分结果，也保存下来供用户下载
+      if (tempResult) {
+        setDateScrapeResult(tempResult)
+      }
     } finally {
       setScrapingByDate(false)
       setDateAbortController(null)
@@ -519,9 +554,9 @@ export default function ChatScraper() {
     console.log('dateScrapeResult:', dateScrapeResult)
     console.log('session:', session)
 
-    if (!dateScrapeResult?.csvFile && !dateScrapeResult?.folderPath) {
-      console.error('No file paths in dateScrapeResult')
-      toast.error('文件路径不存在');
+    if (!dateScrapeResult) {
+      console.error('No dateScrapeResult')
+      toast.error('没有可下载的数据');
       return;
     }
 
@@ -532,18 +567,19 @@ export default function ChatScraper() {
     }
 
     try {
-      // 从绝对路径中提取相对路径（scraped_data/...）
-      const absolutePath = type === 'csv' ? dateScrapeResult.csvFile : dateScrapeResult.folderPath;
-      const scrapedDataIndex = absolutePath.indexOf('scraped_data');
+      let filePath = '';
       
-      if (scrapedDataIndex === -1) {
-        console.error('Invalid path format:', absolutePath);
-        toast.error('文件路径格式错误');
-        return;
+      // 如果有完整的文件路径，从绝对路径中提取相对路径
+      if (dateScrapeResult.csvFile || dateScrapeResult.folderPath) {
+        const absolutePath = type === 'csv' ? dateScrapeResult.csvFile : dateScrapeResult.folderPath;
+        const scrapedDataIndex = absolutePath.indexOf('scraped_data');
+        
+        if (scrapedDataIndex !== -1) {
+          filePath = absolutePath.substring(scrapedDataIndex);
+        }
       }
       
-      const filePath = absolutePath.substring(scrapedDataIndex);
-      console.log('Sending download request with path:', filePath)
+      console.log('Sending download request with path:', filePath, 'group:', dateScrapeResult.group, 'dates:', startDate, endDate)
       
       const response = await fetch(`/api/chat-scraper/download`, {
         method: 'POST',
@@ -552,7 +588,11 @@ export default function ChatScraper() {
         },
         body: JSON.stringify({
           filePath,
-          type
+          type,
+          group: dateScrapeResult.group,
+          startDate,
+          endDate,
+          topicId: topicId || undefined
         })
       });
 
@@ -571,7 +611,7 @@ export default function ChatScraper() {
       // 从 dateScrapeResult 中获取群组名称
       const groupName = dateScrapeResult.group.replace(/^@/, '');
       const fileName = type === 'csv' 
-        ? dateScrapeResult.csvFile.split('/').pop() || `${groupName}_messages.csv`
+        ? (dateScrapeResult.csvFile ? (dateScrapeResult.csvFile.split('/').pop() || `${groupName}_messages.csv`) : `${groupName}_messages.csv`)
         : `${groupName}_all.zip`;
       a.download = fileName;
       document.body.appendChild(a);
@@ -1009,8 +1049,8 @@ export default function ChatScraper() {
               </div>
             )}
 
-            {/* Scrape Results */}
-            {scrapeResult && isComplete && (
+            {/* Scrape Results - 即使有错误也显示已抓取的部分 */}
+            {scrapeResult && (
               <div className="mt-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -1019,8 +1059,17 @@ export default function ChatScraper() {
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-lg font-bold text-green-900">抓取完成！</h4>
-                    <p className="text-sm text-green-600">数据已准备好，可以下载</p>
+                    <h4 className="text-lg font-bold text-green-900">
+                      {isComplete ? '抓取完成！' : '部分数据可用'}
+                    </h4>
+                    <p className="text-sm text-green-600">
+                      {isComplete 
+                        ? '数据已准备好，可以下载' 
+                        : error 
+                          ? '虽然出现错误，但已抓取的数据可以下载' 
+                          : '数据已准备好，可以下载'
+                      }
+                    </p>
                   </div>
                 </div>
                 <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -1255,8 +1304,8 @@ export default function ChatScraper() {
               </div>
             )}
 
-            {/* Date Range Scrape Results */}
-            {dateScrapeResult && isDateComplete && (
+            {/* Date Range Scrape Results - 即使有错误也显示已抓取的部分 */}
+            {dateScrapeResult && (
               <div className="mt-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -1265,8 +1314,17 @@ export default function ChatScraper() {
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-lg font-bold text-green-900">抓取完成！</h4>
-                    <p className="text-sm text-green-600">数据已准备好，可以下载</p>
+                    <h4 className="text-lg font-bold text-green-900">
+                      {isDateComplete ? '抓取完成！' : '部分数据可用'}
+                    </h4>
+                    <p className="text-sm text-green-600">
+                      {isDateComplete 
+                        ? '数据已准备好，可以下载' 
+                        : dateError 
+                          ? '虽然出现错误，但已抓取的数据可以下载' 
+                          : '数据已准备好，可以下载'
+                      }
+                    </p>
                   </div>
                 </div>
                 <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createReadStream } from 'fs'
-import { stat } from 'fs/promises'
+import { stat, readdir } from 'fs/promises'
 import path from 'path'
 import archiver from 'archiver'
 import { Readable } from 'stream'
@@ -14,20 +14,80 @@ export async function POST(request: NextRequest) {
       return handleAuthError(auth.error!)
     }
 
-    const { filePath, type } = await request.json()
+    const { filePath, type, group, startDate, endDate, topicId } = await request.json()
     
-    // 安全检查：确保文件路径在用户目录下
-    const fullPath = path.join(process.cwd(), filePath)
     const userDir = path.join(process.cwd(), 'scraped_data', auth.user.email)
-    
-    if (!fullPath.startsWith(userDir)) {
-      return new Response('Access denied', { status: 403 })
-    }
+    let fullPath: string;
 
-    try {
-      await stat(fullPath)
-    } catch (error) {
-      return new Response('File not found', { status: 404 })
+    // 如果没有提供filePath，根据group等信息查找最新文件
+    if (!filePath || filePath === '') {
+      if (!group) {
+        return new Response('Either filePath or group must be provided', { status: 400 })
+      }
+
+      // 构建群组目录
+      const groupDir = path.join(userDir, group.replace(/^@/, ''))
+      
+      try {
+        const files = await readdir(groupDir)
+        
+        // 查找匹配的CSV文件（包括.tmp文件）
+        let targetFiles = files.filter(f => {
+          const isCSV = f.endsWith('.csv') || f.endsWith('.csv.tmp')
+          if (!isCSV) return false
+          
+          // 如果指定了日期范围，匹配文件名
+          if (startDate && endDate) {
+            const startFormatted = startDate.replace(/-/g, '')
+            const endFormatted = endDate.replace(/-/g, '')
+            return f.includes(startFormatted) && f.includes(endFormatted)
+          }
+          
+          // 如果指定了topicId，匹配文件名
+          if (topicId) {
+            return f.includes(`topic${topicId}`)
+          }
+          
+          return true
+        })
+
+        if (targetFiles.length === 0) {
+          return new Response('No matching files found', { status: 404 })
+        }
+
+        // 获取最新的文件（按修改时间排序）
+        const filesWithStats = await Promise.all(
+          targetFiles.map(async (file) => {
+            const filePath = path.join(groupDir, file)
+            const stats = await stat(filePath)
+            return { file, mtime: stats.mtime }
+          })
+        )
+        
+        filesWithStats.sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
+        const latestFile = filesWithStats[0].file
+        
+        fullPath = type === 'csv' 
+          ? path.join(groupDir, latestFile)
+          : groupDir
+      } catch (error) {
+        console.error('Error finding files:', error)
+        return new Response('Group directory not found or no files available', { status: 404 })
+      }
+    } else {
+      // 使用提供的filePath
+      fullPath = path.join(process.cwd(), filePath)
+      
+      // 安全检查：确保文件路径在用户目录下
+      if (!fullPath.startsWith(userDir)) {
+        return new Response('Access denied', { status: 403 })
+      }
+
+      try {
+        await stat(fullPath)
+      } catch (error) {
+        return new Response('File not found', { status: 404 })
+      }
     }
 
     if (type === 'csv') {
